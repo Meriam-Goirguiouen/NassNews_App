@@ -1,4 +1,4 @@
-package ma.nassnewsapp.backend;
+package ma.nassnewsapp.backend.entity;
 
 import java.time.LocalDate;
 
