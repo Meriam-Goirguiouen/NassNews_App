@@ -1,4 +1,4 @@
-package ma.nassnewsapp.backend.entity;
+package ma.nassnewsapp.backend.entities;
 
 import java.util.List;
 
