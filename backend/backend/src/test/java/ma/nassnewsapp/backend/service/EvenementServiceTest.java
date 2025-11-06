@@ -2,6 +2,8 @@ package ma.nassnewsapp.backend.service;
 
 import ma.nassnewsapp.backend.entities.Evenement;
 import ma.nassnewsapp.backend.repositories.EvenementRepository;
+import ma.nassnewsapp.backend.services.EvenementService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
