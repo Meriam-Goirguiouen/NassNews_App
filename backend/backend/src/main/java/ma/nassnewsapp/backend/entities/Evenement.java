@@ -22,7 +22,21 @@ public class Evenement {
 	private String typeEvenement; // categorie/type
 
 	private Integer villeId; // to support filtering by city without modeling Ville entity yet
+	
+    // Add this no-argument constructor (required by frameworks like Spring Data)
+    public Evenement() {
+    }
 
+    // Add this constructor for easily creating objects in your code and tests
+    public Evenement(Integer idEvenement, String titre, String description, String lieu, LocalDate dateEvenement, String typeEvenement, Integer villeId) {
+        this.idEvenement = idEvenement;
+        this.titre = titre;
+        this.description = description;
+        this.lieu = lieu;
+        this.dateEvenement = dateEvenement;
+        this.typeEvenement = typeEvenement;
+        this.villeId = villeId;
+    }
 	public Integer getIdEvenement() {
 		return idEvenement;
 	}

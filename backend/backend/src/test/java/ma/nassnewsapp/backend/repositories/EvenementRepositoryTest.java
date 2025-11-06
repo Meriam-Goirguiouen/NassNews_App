@@ -13,7 +13,7 @@ import org.springframework.lang.NonNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataMongoTest
+@DataMongoTest(properties = "spring.mongodb.embedded.version=7.0.5")
 class EvenementRepositoryTest {
 
 	@Autowired
