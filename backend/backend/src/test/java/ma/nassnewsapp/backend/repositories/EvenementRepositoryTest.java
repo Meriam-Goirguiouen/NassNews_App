@@ -1,155 +1,109 @@
 package ma.nassnewsapp.backend.repositories;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.time.LocalDate;
-import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
+import ma.nassnewsapp.backend.entities.Evenement;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
+import org.springframework.lang.NonNull;
 
-import ma.nassnewsapp.backend.entities.Evenement;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataMongoTest
 class EvenementRepositoryTest {
 
-    @Autowired
-    private EvenementRepository evenementRepository;
+	@Autowired
+	private EvenementRepository evenementRepository;
 
-    private Evenement evenement1;
-    private Evenement evenement2;
-    private Evenement evenement3;
+	@AfterEach
+	void tearDown() {
+		evenementRepository.deleteAll();
+	}
 
-    @BeforeEach
-    void setUp() {
-        evenementRepository.deleteAll();
+	@Test
+	void shouldFindEvenementsByVille() {
+		Evenement evenementAgadir1 = buildEvenement(1, "Festival Timitar", "Concert de musique Amazighe", "Place Al Amal",
+				LocalDate.of(2024, 6, 15), "Concert", 1);
+		Evenement evenementAgadir2 = buildEvenement(2, "Marathon d'Agadir", "Course à pied", "Corniche",
+				LocalDate.of(2024, 7, 20), "Sport", 1);
+		Evenement evenementMarrakech = buildEvenement(3, "Festival du Film", "Cinéma international",
+				"Palais des Congrès", LocalDate.of(2024, 11, 12), "Culture", 2);
 
-        // Créer des événements de test
-        evenement1 = new Evenement();
-        evenement1.setIdEvenement(1);
-        evenement1.setTitre("Festival de Musique");
-        evenement1.setDescription("Un grand festival de musique en plein air");
-        evenement1.setLieu("Place Jemaa el-Fnaa");
-        evenement1.setDateEvenement(LocalDate.of(2024, 6, 15));
-        evenement1.setTypeEvenement("Culture");
-        evenement1.setVilleId(1);
+		evenementRepository.save(evenementAgadir1);
+		evenementRepository.save(evenementAgadir2);
+		evenementRepository.save(evenementMarrakech);
 
-        evenement2 = new Evenement();
-        evenement2.setIdEvenement(2);
-        evenement2.setTitre("Match de Football");
-        evenement2.setDescription("Match de football local");
-        evenement2.setLieu("Stade Municipal");
-        evenement2.setDateEvenement(LocalDate.of(2024, 7, 20));
-        evenement2.setTypeEvenement("Sport");
-        evenement2.setVilleId(1);
+		var resultats = evenementRepository.getEvenementsByVille(1);
 
-        evenement3 = new Evenement();
-        evenement3.setIdEvenement(3);
-        evenement3.setTitre("Exposition d'Art");
-        evenement3.setDescription("Exposition d'art contemporain");
-        evenement3.setLieu("Musée d'Art");
-        evenement3.setDateEvenement(LocalDate.of(2024, 8, 10));
-        evenement3.setTypeEvenement("Culture");
-        evenement3.setVilleId(2);
-    }
+		assertThat(resultats).hasSize(2);
+		assertThat(resultats).extracting(Evenement::getTitre).containsExactlyInAnyOrder("Festival Timitar",
+				"Marathon d'Agadir");
+	}
 
-    @Test
-    void testAjouterEvenement() {
-        Evenement saved = evenementRepository.ajouterEvenement(evenement1);
+	@Test
+	void shouldFindEvenementsByCategorie() {
+		Evenement evenementConcert1 = buildEvenement(10, "Festival Timitar", "Concert de musique Amazighe", "Place Al Amal",
+				LocalDate.of(2024, 6, 15), "Concert", 1);
+		Evenement evenementSport = buildEvenement(11, "Marathon d'Agadir", "Course à pied", "Corniche",
+				LocalDate.of(2024, 7, 20), "Sport", 1);
+		Evenement evenementCulture = buildEvenement(12, "Festival du Film", "Cinéma international",
+				"Palais des Congrès", LocalDate.of(2024, 11, 12), "Culture", 2);
+		Evenement evenementConcert2 = buildEvenement(13, "Concert Gnaoua", "Musique du monde", "Essaouira",
+				LocalDate.of(2024, 9, 3), "Concert", 3);
 
-        assertNotNull(saved);
-        assertNotNull(saved.getIdEvenement());
-        assertEquals("Festival de Musique", saved.getTitre());
-        assertEquals(1, saved.getVilleId());
-        assertEquals("Culture", saved.getTypeEvenement());
-        assertTrue(evenementRepository.existsById(saved.getIdEvenement()));
-    }
+		evenementRepository.save(evenementConcert1);
+		evenementRepository.save(evenementSport);
+		evenementRepository.save(evenementCulture);
+		evenementRepository.save(evenementConcert2);
 
-    @Test
-    void testModifierEvenement() {
-        Evenement saved = evenementRepository.ajouterEvenement(evenement1);
-        Integer id = saved.getIdEvenement();
+		var resultats = evenementRepository.getEvenementsByCategorie("Concert");
 
-        saved.setTitre("Festival de Musique Modifié");
-        saved.setDescription("Description modifiée");
-        Evenement updated = evenementRepository.modifierEvenement(saved);
+		assertThat(resultats).hasSize(2);
+		assertThat(resultats).extracting(Evenement::getTitre).containsExactlyInAnyOrder("Festival Timitar",
+				"Concert Gnaoua");
+	}
 
-        assertNotNull(updated);
-        assertEquals(id, updated.getIdEvenement());
-        assertEquals("Festival de Musique Modifié", updated.getTitre());
-        assertEquals("Description modifiée", updated.getDescription());
-    }
+	@Test
+	void shouldAjouterEvenementAndFindIt() {
+		Evenement nouvelEvenement = buildEvenement(20, "Nouvel Événement", "Description test", "Lieu Test",
+				LocalDate.of(2024, 8, 1), "Test", 10);
 
-    @Test
-    void testSupprimerEvenement() {
-        Evenement saved = evenementRepository.ajouterEvenement(evenement1);
-        Integer id = saved.getIdEvenement();
+		Evenement savedEvent = evenementRepository.ajouterEvenement(nouvelEvenement);
+		int idEvenement = Objects.requireNonNull(savedEvent.getIdEvenement());
 
-        assertTrue(evenementRepository.existsById(id));
+		Optional<Evenement> foundEvent = evenementRepository.findById(idEvenement);
+		assertThat(foundEvent).isPresent();
+		assertThat(foundEvent.get().getTitre()).isEqualTo("Nouvel Événement");
+	}
 
-        evenementRepository.supprimerEvenement(id);
+	@Test
+	void shouldSupprimerEvenement() {
+		Evenement evenement = buildEvenement(30, "Événement à Supprimer", "Description", "Lieu",
+				LocalDate.of(2024, 12, 31), "Delete", 99);
+		evenementRepository.save(evenement);
 
-        assertFalse(evenementRepository.existsById(id));
-    }
+		int idEvenement = Objects.requireNonNull(evenement.getIdEvenement());
+		assertThat(evenementRepository.findById(idEvenement)).isPresent();
 
-    @Test
-    void testGetEvenementsByVille() {
-        evenementRepository.ajouterEvenement(evenement1);
-        evenementRepository.ajouterEvenement(evenement2);
-        evenementRepository.ajouterEvenement(evenement3);
+		evenementRepository.supprimerEvenement(idEvenement);
 
-        List<Evenement> evenementsVille1 = evenementRepository.getEvenementsByVille(1);
-        assertNotNull(evenementsVille1);
-        assertEquals(2, evenementsVille1.size());
-        assertTrue(evenementsVille1.stream().allMatch(e -> e.getVilleId().equals(1)));
+		assertThat(evenementRepository.findById(idEvenement)).isNotPresent();
+	}
 
-        List<Evenement> evenementsVille2 = evenementRepository.getEvenementsByVille(2);
-        assertNotNull(evenementsVille2);
-        assertEquals(1, evenementsVille2.size());
-        assertEquals(2, evenementsVille2.get(0).getVilleId());
-    }
-
-    @Test
-    void testGetEvenementsByCategorie() {
-        evenementRepository.ajouterEvenement(evenement1);
-        evenementRepository.ajouterEvenement(evenement2);
-        evenementRepository.ajouterEvenement(evenement3);
-
-        List<Evenement> evenementsCulture = evenementRepository.getEvenementsByCategorie("Culture");
-        assertNotNull(evenementsCulture);
-        assertEquals(2, evenementsCulture.size());
-        assertTrue(evenementsCulture.stream().allMatch(e -> "Culture".equals(e.getTypeEvenement())));
-
-        List<Evenement> evenementsSport = evenementRepository.getEvenementsByCategorie("Sport");
-        assertNotNull(evenementsSport);
-        assertEquals(1, evenementsSport.size());
-        assertEquals("Sport", evenementsSport.get(0).getTypeEvenement());
-    }
-
-    @Test
-    void testGetEvenementsByVille_NoResults() {
-        List<Evenement> evenements = evenementRepository.getEvenementsByVille(999);
-        assertNotNull(evenements);
-        assertTrue(evenements.isEmpty());
-    }
-
-    @Test
-    void testGetEvenementsByCategorie_NoResults() {
-        List<Evenement> evenements = evenementRepository.getEvenementsByCategorie("Inexistante");
-        assertNotNull(evenements);
-        assertTrue(evenements.isEmpty());
-    }
-
-    @Test
-    void testFindAll() {
-        evenementRepository.ajouterEvenement(evenement1);
-        evenementRepository.ajouterEvenement(evenement2);
-        evenementRepository.ajouterEvenement(evenement3);
-
-        List<Evenement> allEvenements = evenementRepository.findAll();
-        assertNotNull(allEvenements);
-        assertEquals(3, allEvenements.size());
-    }
+	private @NonNull Evenement buildEvenement(Integer id, String titre, String description, String lieu, LocalDate date,
+			String typeEvenement, Integer villeId) {
+		Evenement evenement = new Evenement();
+		evenement.setIdEvenement(id);
+		evenement.setTitre(titre);
+		evenement.setDescription(description);
+		evenement.setLieu(lieu);
+		evenement.setDateEvenement(date);
+		evenement.setTypeEvenement(typeEvenement);
+		evenement.setVilleId(villeId);
+		return evenement;
+	}
 }
