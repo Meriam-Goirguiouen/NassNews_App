@@ -50,16 +50,14 @@
 			<scope>test</scope>
 		</dependency>
 		
-		<!-- ============================================================== -->
-		<!-- ==        C'EST CE BLOC QUI MANQUAIT DANS VOTRE FICHIER       == -->
-		<!-- ============================================================== -->
+		
 		<dependency>
 			<groupId>de.flapdoodle.embed</groupId>
 			<artifactId>de.flapdoodle.embed.mongo.spring30x</artifactId>
 			<version>4.11.0</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- ============================================================== -->
+		
 
 	</dependencies>
 
