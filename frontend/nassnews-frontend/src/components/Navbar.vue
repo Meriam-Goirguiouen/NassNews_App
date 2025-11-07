@@ -2,16 +2,13 @@
   <nav
     :class="[
       'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-      scrolled ? 'bg-white shadow-md' : 'bg-transparent'
+      scrolled ? 'bg-white shadow-md' : 'bg-white/95 backdrop-blur-sm'
     ]"
   >
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <div class="flex-shrink-0">
-          <h1 :class="['text-2xl font-bold', scrolled ? 'text-moroccan-red' : 'text-white']">
-            NassNews
-          </h1>
-        </div>
+          <img :src="logoWide" alt="NassNews Logo" class="h-12 w-auto" />        </div>
 
         <div class="hidden md:flex items-center space-x-8">
           <a
@@ -20,7 +17,7 @@
             :href="link.href"
             :class="[
               'text-sm font-medium transition-colors duration-200',
-              scrolled ? 'text-gray-700 hover:text-moroccan-red' : 'text-white hover:text-moroccan-green'
+              'text-[#5F6B61] hover:text-[#7A1F1F]'
             ]"
           >
             {{ link.name }}
@@ -29,7 +26,7 @@
 
         <button
           @click="toggleMenu"
-          :class="['md:hidden', scrolled ? 'text-gray-700' : 'text-white']"
+          class="md:hidden text-[#5F6B61]"
         >
           <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -44,7 +41,7 @@
           v-for="link in navLinks"
           :key="link.name"
           :href="link.href"
-          class="block px-3 py-2 text-base font-medium text-gray-700 hover:text-moroccan-red hover:bg-gray-50 transition-colors duration-200"
+          class="block px-3 py-2 text-base font-medium text-[#5F6B61] hover:text-[#7A1F1F] hover:bg-[#E6E6E6] transition-colors duration-200"
         >
           {{ link.name }}
         </a>
@@ -55,6 +52,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import logoWide from '../assets/logoWide.png'
 
 const scrolled = ref(false)
 const mobileMenuOpen = ref(false)
