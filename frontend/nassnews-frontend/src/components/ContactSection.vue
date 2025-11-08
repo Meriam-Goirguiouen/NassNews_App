@@ -1,145 +1,50 @@
 <template>
-  <section id="contact" class="py-20 bg-white">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-12 fade-in-scroll">
-        <h2 class="text-4xl font-bold mb-4 text-gray-900">Contact Us</h2>
-        <p class="text-lg text-gray-600">
-          Have questions or suggestions? We'd love to hear from you.
-        </p>
+  <section id="contact" class="bg-[#7A1F1F] py-20">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="text-center mb-14">
+        <button class="px-5 py-2 rounded-full border border-white text-white font-medium mb-8 hover:bg-white/10 transition">Reach Out To Us</button>
+        <h2 class="text-4xl md:text-5xl font-bold mb-4 text-white">We'd Love to Hear From You.</h2>
+        <p class="text-lg text-white/90 mb-2">Or just reach out manually to <a href="mailto:hello@slothoi.com" class="underline hover:text-[#D4AF37] text-[#D4AF37]">hello@slothui.com</a>.</p>
       </div>
-
-      <form @submit.prevent="handleSubmit" class="space-y-6 fade-in-scroll delay-200">
-        <div>
-          <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
-            Name
-          </label>
-          <input
-            v-model="form.name"
-            type="text"
-            id="name"
-            required
-            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-moroccan-red focus:border-transparent transition-all duration-200 outline-none"
-            placeholder="Your full name"
-          />
+      <div class="grid md:grid-cols-3 gap-10 text-white">
+        <!-- Email -->
+        <div class="bg-transparent flex flex-col items-center text-center">
+          <span class="mb-4 flex items-center justify-center h-14 w-14 rounded-full bg-[#D4AF37]/20">
+            <!-- SVG Mail Icon -->
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-7 h-7 text-[#D4AF37]"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </span>
+          <div class="font-bold text-lg mb-1">Email Support</div>
+          <div class="text-white/80 text-base mb-2">Our team can respond in real time.</div>
+          <a class="text-[#D4AF37] hover:underline" href="mailto:hello@nassnews.com">hello@slothui.com</a>
         </div>
-
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-            Email
-          </label>
-          <input
-            v-model="form.email"
-            type="email"
-            id="email"
-            required
-            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-moroccan-red focus:border-transparent transition-all duration-200 outline-none"
-            placeholder="your.email@example.com"
-          />
+        <!-- Office -->
+        <div class="bg-transparent flex flex-col items-center text-center">
+          <span class="mb-4 flex items-center justify-center h-14 w-14 rounded-full bg-[#D4AF37]/20">
+            <!-- SVG Office/Icon -->
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-7 h-7 text-[#D4AF37]"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          </span>
+          <div class="font-bold text-lg mb-1">Visit Our Office</div>
+          <div class="text-white/80 text-base mb-2">Visit our location in real life.</div>
+          <div class="text-[#D4AF37]">221b Elementary Avenue, NY</div>
         </div>
-
-        <div>
-          <label for="message" class="block text-sm font-medium text-gray-700 mb-2">
-            Message
-          </label>
-          <textarea
-            v-model="form.message"
-            id="message"
-            required
-            rows="6"
-            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-moroccan-red focus:border-transparent transition-all duration-200 outline-none resize-none"
-            placeholder="Tell us what's on your mind..."
-          ></textarea>
+        <!-- Call -->
+        <div class="bg-transparent flex flex-col items-center text-center">
+          <span class="mb-4 flex items-center justify-center h-14 w-14 rounded-full bg-[#D4AF37]/20">
+            <!-- SVG Phone Icon -->
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-7 h-7 text-[#D4AF37]"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+          </span>
+          <div class="font-bold text-lg mb-1">Call Us Directly</div>
+          <div class="text-white/80 text-base mb-2">Available during working hours.</div>
+          <a class="text-[#D4AF37] hover:underline" href="tel:+212784962153">(+212) 784962153</a>
         </div>
-
-        <div>
-          <button
-            type="submit"
-            :disabled="isSubmitting"
-            :class="[
-              'w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-300 transform',
-              isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-moroccan-red hover:bg-moroccan-green hover:shadow-lg hover:scale-[1.02]'
-            ]"
-          >
-            {{ isSubmitting ? 'Sending...' : 'Send Message' }}
-          </button>
-        </div>
-
-        <div
-          v-if="successMessage"
-          class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-center"
-        >
-          {{ successMessage }}
-        </div>
-      </form>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const form = ref({
-  name: '',
-  email: '',
-  message: ''
-})
-
-const isSubmitting = ref(false)
-const successMessage = ref('')
-
-const handleSubmit = async () => {
-  isSubmitting.value = true
-
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
-  successMessage.value = 'Thank you for your message! We\'ll get back to you soon.'
-
-  form.value = {
-    name: '',
-    email: '',
-    message: ''
-  }
-
-  isSubmitting.value = false
-
-  setTimeout(() => {
-    successMessage.value = ''
-  }, 5000)
-}
-
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible')
-        }
-      })
-    },
-    { threshold: 0.1 }
-  )
-
-  document.querySelectorAll('.fade-in-scroll').forEach((el) => {
-    observer.observe(el)
-  })
-})
+// No form/actions needed for this layout
 </script>
 
 <style scoped>
-.fade-in-scroll {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-}
-
-.fade-in-scroll.delay-200 {
-  transition-delay: 0.2s;
-}
-
-.fade-in-scroll.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
 </style>
