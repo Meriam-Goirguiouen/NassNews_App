@@ -1,8 +1,8 @@
 package ma.nassnewsapp.backend.services;
 
 import ma.nassnewsapp.backend.entities.Evenement;
+import ma.nassnewsapp.backend.entities.Ville;
 import ma.nassnewsapp.backend.repositories.EvenementRepository;
-import ma.nassnewsapp.backend.services.EvenementService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +23,9 @@ class EvenementServiceTest {
 
     @Mock // Creates a mock implementation of the repository
     private EvenementRepository evenementRepository;
+
+    @Mock // Creates a mock implementation of VilleService
+    private VilleService villeService;
 
     @InjectMocks // Creates an instance of EvenementService and injects the mocks into it
     private EvenementService evenementService;
@@ -46,6 +49,8 @@ class EvenementServiceTest {
     void shouldCreateEvenementSuccessfully() {
         // Given
         Evenement eventToCreate = new Evenement(100, "New Event", "...", "...", LocalDate.now(), "Test", 10);
+        Ville mockVille = new Ville("10", "Test City", "Test Region", "0,0", 1000L);
+        given(villeService.getVilleById("10")).willReturn(Optional.of(mockVille));
         given(evenementRepository.ajouterEvenement(eventToCreate)).willReturn(eventToCreate);
 
         // When
@@ -54,6 +59,7 @@ class EvenementServiceTest {
         // Then
         assertThat(createdEvent).isNotNull();
         assertThat(createdEvent.getTitre()).isEqualTo("New Event");
+        verify(villeService).getVilleById("10");
         verify(evenementRepository).ajouterEvenement(eventToCreate);
     }
 

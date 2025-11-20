@@ -2,6 +2,8 @@ package ma.nassnewsapp.backend.services;
 
 import ma.nassnewsapp.backend.entities.Utilisateur;
 import ma.nassnewsapp.backend.repositories.UtilisateurRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +13,8 @@ import java.util.Optional;
 @Service
 public class UtilisateurService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UtilisateurService.class);
+    
     private final UtilisateurRepository utilisateurRepository;
     private final VilleService villeService;
 
@@ -20,6 +24,7 @@ public class UtilisateurService {
     public UtilisateurService(UtilisateurRepository utilisateurRepository, VilleService villeService) {
         this.utilisateurRepository = utilisateurRepository;
         this.villeService = villeService;
+        logger.info("UtilisateurService initialized with VilleService dependency");
     }
 
     /**
@@ -57,10 +62,16 @@ public class UtilisateurService {
     public Utilisateur createUtilisateur(Utilisateur utilisateur) {
         // Validate favorite villes exist
         if (utilisateur.getVillesFavorites() != null && !utilisateur.getVillesFavorites().isEmpty()) {
+            logger.debug("UtilisateurService: Validating {} favorite villes via VilleService", utilisateur.getVillesFavorites().size());
             for (Integer villeIdInt : utilisateur.getVillesFavorites()) {
+                logger.debug("UtilisateurService: Validating ville ID {} via VilleService", villeIdInt);
                 villeService.getVilleById(String.valueOf(villeIdInt))
-                    .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + villeIdInt + " not found"));
+                    .orElseThrow(() -> {
+                        logger.warn("UtilisateurService: Ville with ID {} not found via VilleService", villeIdInt);
+                        return new IllegalArgumentException("Ville with ID " + villeIdInt + " not found");
+                    });
             }
+            logger.debug("UtilisateurService: All favorite villes validated successfully via VilleService");
         }
         // Logique de validation ou de traitement avant sauvegarde (ex: hasher le mot de passe)
         return utilisateurRepository.save(utilisateur);
@@ -75,10 +86,16 @@ public class UtilisateurService {
     public Optional<Utilisateur> updateUtilisateur(Integer id, Utilisateur utilisateurDetails) {
         // Validate favorite villes exist if they are being updated
         if (utilisateurDetails.getVillesFavorites() != null && !utilisateurDetails.getVillesFavorites().isEmpty()) {
+            logger.debug("UtilisateurService: Validating {} favorite villes via VilleService for update", utilisateurDetails.getVillesFavorites().size());
             for (Integer villeIdInt : utilisateurDetails.getVillesFavorites()) {
+                logger.debug("UtilisateurService: Validating ville ID {} via VilleService for update", villeIdInt);
                 villeService.getVilleById(String.valueOf(villeIdInt))
-                    .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + villeIdInt + " not found"));
+                    .orElseThrow(() -> {
+                        logger.warn("UtilisateurService: Ville with ID {} not found via VilleService during update", villeIdInt);
+                        return new IllegalArgumentException("Ville with ID " + villeIdInt + " not found");
+                    });
             }
+            logger.debug("UtilisateurService: All favorite villes validated successfully via VilleService for update");
         }
         
         return utilisateurRepository.findById(id)

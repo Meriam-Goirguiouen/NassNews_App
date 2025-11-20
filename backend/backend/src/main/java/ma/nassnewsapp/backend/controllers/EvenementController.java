@@ -1,4 +1,4 @@
-package ma.nassnewsapp.backend.controller;
+package ma.nassnewsapp.backend.controllers;
 
 import ma.nassnewsapp.backend.entities.Evenement;
 import ma.nassnewsapp.backend.services.EvenementService;
