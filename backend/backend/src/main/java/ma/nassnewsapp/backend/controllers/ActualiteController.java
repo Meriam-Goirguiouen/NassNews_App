@@ -71,4 +71,21 @@ public class ActualiteController {
         return actualite.map(ResponseEntity::ok)
                         .orElse(ResponseEntity.notFound().build());
     }
+
+    /**
+     * Endpoint pour créer une nouvelle actualité.
+     * URL : POST /api/actualites
+     *
+     * @param actualite L'actualité à créer (provient du corps de la requête JSON).
+     * @return L'actualité créée avec un statut 201 Created.
+     */
+    @PostMapping
+    public ResponseEntity<Actualite> createActualite(@RequestBody Actualite actualite) {
+        try {
+            Actualite createdActualite = actualiteService.createActualite(actualite);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(createdActualite);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }

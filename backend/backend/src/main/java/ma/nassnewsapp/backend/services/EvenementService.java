@@ -11,10 +11,12 @@ import java.util.Optional;
 public class EvenementService {
 
     private final EvenementRepository evenementRepository;
+    private final VilleService villeService;
 
     // Constructor injection is a best practice
-    public EvenementService(EvenementRepository evenementRepository) {
+    public EvenementService(EvenementRepository evenementRepository, VilleService villeService) {
         this.evenementRepository = evenementRepository;
+        this.villeService = villeService;
     }
 
     public List<Evenement> getAllEvenements() {
@@ -34,12 +36,21 @@ public class EvenementService {
     }
 
     public Evenement createEvenement(Evenement evenement) {
-        // In a real app, you might want logic to ensure the ID is unique
-        // or generate it from a sequence.
+        // Validate ville exists before creating event
+        if (evenement.getVilleId() != null) {
+            villeService.getVilleById(String.valueOf(evenement.getVilleId()))
+                .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + evenement.getVilleId() + " not found"));
+        }
         return evenementRepository.ajouterEvenement(evenement);
     }
 
     public Optional<Evenement> updateEvenement(Integer id, Evenement evenementDetails) {
+        // Validate ville exists if villeId is being updated
+        if (evenementDetails.getVilleId() != null) {
+            villeService.getVilleById(String.valueOf(evenementDetails.getVilleId()))
+                .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + evenementDetails.getVilleId() + " not found"));
+        }
+        
         return evenementRepository.findById(id)
                 .map(existingEvent -> {
                     existingEvent.setTitre(evenementDetails.getTitre());

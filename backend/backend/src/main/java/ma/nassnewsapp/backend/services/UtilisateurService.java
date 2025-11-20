@@ -12,12 +12,14 @@ import java.util.Optional;
 public class UtilisateurService {
 
     private final UtilisateurRepository utilisateurRepository;
+    private final VilleService villeService;
 
     // L'injection par constructeur est une bonne pratique.
     // Spring s'occupe de fournir une instance de UtilisateurRepository.
     @Autowired
-    public UtilisateurService(UtilisateurRepository utilisateurRepository) {
+    public UtilisateurService(UtilisateurRepository utilisateurRepository, VilleService villeService) {
         this.utilisateurRepository = utilisateurRepository;
+        this.villeService = villeService;
     }
 
     /**
@@ -53,6 +55,13 @@ public class UtilisateurService {
      * @return L'utilisateur sauvegardé.
      */
     public Utilisateur createUtilisateur(Utilisateur utilisateur) {
+        // Validate favorite villes exist
+        if (utilisateur.getVillesFavorites() != null && !utilisateur.getVillesFavorites().isEmpty()) {
+            for (Integer villeIdInt : utilisateur.getVillesFavorites()) {
+                villeService.getVilleById(String.valueOf(villeIdInt))
+                    .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + villeIdInt + " not found"));
+            }
+        }
         // Logique de validation ou de traitement avant sauvegarde (ex: hasher le mot de passe)
         return utilisateurRepository.save(utilisateur);
     }
@@ -64,6 +73,14 @@ public class UtilisateurService {
      * @return un Optional contenant l'utilisateur mis à jour s'il existait.
      */
     public Optional<Utilisateur> updateUtilisateur(Integer id, Utilisateur utilisateurDetails) {
+        // Validate favorite villes exist if they are being updated
+        if (utilisateurDetails.getVillesFavorites() != null && !utilisateurDetails.getVillesFavorites().isEmpty()) {
+            for (Integer villeIdInt : utilisateurDetails.getVillesFavorites()) {
+                villeService.getVilleById(String.valueOf(villeIdInt))
+                    .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + villeIdInt + " not found"));
+            }
+        }
+        
         return utilisateurRepository.findById(id)
                 .map(existingUser -> {
                     existingUser.setNom(utilisateurDetails.getNom());
