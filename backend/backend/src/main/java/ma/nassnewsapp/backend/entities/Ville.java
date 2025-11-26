@@ -13,22 +13,20 @@ public class Ville {
     @Field("nom")
     private String nom;
 
-    @Field("region")
-    private String region;
+    // @Field("region")
+    // private String region;
 
     @Field("coordonnees")
-    private String coordonnees; // Exemple : "latitude,longitude"
+    private String coordonnees; // coordonnées = "latitude,longitude"
 
-    @Field("population")
-    private Long population; // Optionnel
+    // @Field("population")
+    // private Long population; // Optionnel
 
     // Constructors
     public Ville(){}
-    public Ville (String id, String nom, String region, String coordonnees, Long population){
+    public Ville (String id, String nom, String coordonnees){
         this.id = id;
         this.nom = nom;
-        this.region = region;
-        this.population = population;
     }
 
     //Getters & Setters
@@ -45,28 +43,11 @@ public class Ville {
     public void setNom(String nom) { 
         this.nom = nom; 
     }
-
-    public String getRegion() { 
-        return region;
-    }
-    public void setRegion(String region) {
-         this.region = region; 
-    }
-
     public String getCoordonnees() {
          return coordonnees; 
     }
     public void setCoordonnees(String coordonnees) {
          this.coordonnees = coordonnees; 
     }
-
-    public Long getPopulation() { 
-        return population; 
-    }
-    public void setPopulation(Long population) { 
-        this.population = population; 
-    }
-
-
-
+    // J'ai éliminé les getters & setters des attributs : region et population (car ils sont optionnels)
 }
