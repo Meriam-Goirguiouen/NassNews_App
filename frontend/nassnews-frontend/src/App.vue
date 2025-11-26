@@ -24,18 +24,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="smooth-scroll">
-    <Navbar />
-    <main>
-      <HeroCarousel />
-      <AboutSection />
-      <ContactSection />
-    </main>
-    <Footer />
+  <div id="app" class="smooth-scroll">
+    <router-view />
   </div>
 </template>
 
-<style scoped>
+<style>
 html {
   scroll-behavior: smooth;
 }
