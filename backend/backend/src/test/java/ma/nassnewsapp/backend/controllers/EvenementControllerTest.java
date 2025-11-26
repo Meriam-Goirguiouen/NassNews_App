@@ -2,9 +2,10 @@ package ma.nassnewsapp.backend.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ma.nassnewsapp.backend.controllers.EvenementController;
 import ma.nassnewsapp.backend.entities.Evenement;
 import ma.nassnewsapp.backend.services.EvenementService;
-import ma.nassnewsapp.backend.controllers.EvenementController;
+import ma.nassnewsapp.backend.services.VilleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -33,6 +34,9 @@ class EvenementControllerTest {
 
     @MockBean // Creates a mock of EvenementService and adds it to the application context
     private EvenementService evenementService;
+
+    @MockBean // Creates a mock of VilleService and adds it to the application context
+    private VilleService villeService;
 
     @Test
     void shouldFetchEventsByVilleId() throws Exception {
