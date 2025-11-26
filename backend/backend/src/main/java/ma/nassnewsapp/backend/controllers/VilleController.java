@@ -5,8 +5,12 @@ import ma.nassnewsapp.backend.entities.Ville;
 import ma.nassnewsapp.backend.services.VilleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 
 @RestController
@@ -50,9 +54,28 @@ public class VilleController {
     }
 
     // Détection automatique de la ville à partir de l'IP
-    @GetMapping("/detect")
-    public Ville detectVille(@RequestParam String ip) {
-        return villeService.detectVilleByIp(ip);
+    // @GetMapping("/detect")
+    // public Ville detectVille(@RequestParam String ip) {
+    //     return villeService.detectVilleByIp(ip);
+    // }
+    @PostMapping("/detect-city")
+    public Ville detectCity(@RequestBody Map<String, Double> coords, HttpServletRequest request) {
+    Ville ville;
+
+    if (coords.containsKey("latitude") && coords.containsKey("longitude")) {
+
+        double lat = coords.get("latitude");
+        double lng = coords.get("longitude");
+
+        // Appel du service basé sur les coordonnées
+        ville = villeService.detectVilleByCoords(lat, lng);
+
+    } else {
+        // Fallback → détection via IP
+        String ip = request.getRemoteAddr();
+        ville = villeService.detectVilleByIp(ip);
     }
-    
+    return ville;
+}
+
 }
