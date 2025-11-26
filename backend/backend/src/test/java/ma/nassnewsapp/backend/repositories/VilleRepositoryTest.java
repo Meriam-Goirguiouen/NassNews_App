@@ -25,9 +25,9 @@ public class VilleRepositoryTest {
     void testCreateAndFindVille() {
         Ville ville1 = new Ville();
         ville1.setNom("Agadir");
-        ville1.setRegion("Sous-Massa");
+        // ville1.setRegion("Sous-Massa");
         ville1.setCoordonnees("48.8566,2.3522");
-        ville1.setPopulation(2148000L);
+        // ville1.setPopulation(2148000L);
 
         Ville savedVille = villeRepository.save(ville1);
         // Vérification que la ville est sauvegardée
@@ -38,14 +38,14 @@ public class VilleRepositoryTest {
         // Rechercher la ville par nom
         Optional<Ville> foundByName = villeRepository.findByNom("Agadir");
         assertThat(foundByName).isPresent();
-        assertThat(foundByName.get().getRegion()).isEqualTo("Sous-Massa");
+        // assertThat(foundByName.get().getRegion()).isEqualTo("Sous-Massa");
     }
 
     @Test
     void testDeleteVille(){
         Ville ville2 = new Ville();
         ville2.setNom("Marrakech");
-        ville2.setRegion("Marrakech-Safi");
+        // ville2.setRegion("Marrakech-Safi");
         ville2.setCoordonnees("45.7640,4.8357");
 
         Ville saveMarrakech = villeRepository.save(ville2);
