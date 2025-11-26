@@ -49,7 +49,7 @@ class EvenementServiceTest {
     void shouldCreateEvenementSuccessfully() {
         // Given
         Evenement eventToCreate = new Evenement(100, "New Event", "...", "...", LocalDate.now(), "Test", 10);
-        Ville mockVille = new Ville("10", "Test City", "Test Region", "0,0", 1000L);
+        Ville mockVille = new Ville("10", "Test City", "0,0");
         given(villeService.getVilleById("10")).willReturn(Optional.of(mockVille));
         given(evenementRepository.ajouterEvenement(eventToCreate)).willReturn(eventToCreate);
 
