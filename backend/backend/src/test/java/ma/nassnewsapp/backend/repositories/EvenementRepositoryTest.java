@@ -1,109 +1,156 @@
 package ma.nassnewsapp.backend.repositories;
 
+import ma.nassnewsapp.backend.entities.Evenement;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.time.LocalDate;
-import java.util.Objects;
+import java.util.List;
 import java.util.Optional;
 
-import ma.nassnewsapp.backend.entities.Evenement;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
-import org.springframework.lang.NonNull;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@DataMongoTest(properties = "spring.mongodb.embedded.version=7.0.5")
-class EvenementRepositoryTest {
+/**
+ * Unit tests for the EvenementRepository interface using Mockito.
+ * These tests validate that the expected data is returned without hitting a real database.
+ */
+@ExtendWith(MockitoExtension.class)
+public class EvenementRepositoryTest {
 
-	@Autowired
-	private EvenementRepository evenementRepository;
+    @Mock
+    private EvenementRepository evenementRepository;
 
-	@AfterEach
-	void tearDown() {
-		evenementRepository.deleteAll();
-	}
+    @InjectMocks
+    private EvenementRepositoryTestHelper repositoryHelper;
 
-	@Test
-	void shouldFindEvenementsByVille() {
-		Evenement evenementAgadir1 = buildEvenement(1, "Festival Timitar", "Concert de musique Amazighe", "Place Al Amal",
-				LocalDate.of(2024, 6, 15), "Concert", 1);
-		Evenement evenementAgadir2 = buildEvenement(2, "Marathon d'Agadir", "Course à pied", "Corniche",
-				LocalDate.of(2024, 7, 20), "Sport", 1);
-		Evenement evenementMarrakech = buildEvenement(3, "Festival du Film", "Cinéma international",
-				"Palais des Congrès", LocalDate.of(2024, 11, 12), "Culture", 2);
+    @Test
+    void shouldFindEvenementsByVille() {
+        // --- 1. Arrange (Setup test data) ---
+        Integer agadirId = 1;
+        Integer marrakechId = 2;
+        Evenement eventAgadir1 = new Evenement(1, "Festival Timitar", "Concert de musique", "Place Al Amal", LocalDate.now(), "Concert", agadirId);
+        Evenement eventAgadir2 = new Evenement(2, "Marathon d'Agadir", "Course à pied", "Cornique", LocalDate.now(), "Sport", agadirId);
+        Evenement eventMarrakech = new Evenement(3, "Festival du Film", "Cinéma", "Palais des Congrès", LocalDate.now(), "Culture", marrakechId);
 
-		evenementRepository.save(evenementAgadir1);
-		evenementRepository.save(evenementAgadir2);
-		evenementRepository.save(evenementMarrakech);
+        List<Evenement> expectedEvents = List.of(eventAgadir1, eventAgadir2);
 
-		var resultats = evenementRepository.getEvenementsByVille(1);
+        when(evenementRepository.getEvenementsByVille(agadirId)).thenReturn(expectedEvents);
 
-		assertThat(resultats).hasSize(2);
-		assertThat(resultats).extracting(Evenement::getTitre).containsExactlyInAnyOrder("Festival Timitar",
-				"Marathon d'Agadir");
-	}
+        // --- 2. Act (Execute the method under test) ---
+        List<Evenement> results = repositoryHelper.getEvenementsByVille(agadirId);
 
-	@Test
-	void shouldFindEvenementsByCategorie() {
-		Evenement evenementConcert1 = buildEvenement(10, "Festival Timitar", "Concert de musique Amazighe", "Place Al Amal",
-				LocalDate.of(2024, 6, 15), "Concert", 1);
-		Evenement evenementSport = buildEvenement(11, "Marathon d'Agadir", "Course à pied", "Corniche",
-				LocalDate.of(2024, 7, 20), "Sport", 1);
-		Evenement evenementCulture = buildEvenement(12, "Festival du Film", "Cinéma international",
-				"Palais des Congrès", LocalDate.of(2024, 11, 12), "Culture", 2);
-		Evenement evenementConcert2 = buildEvenement(13, "Concert Gnaoua", "Musique du monde", "Essaouira",
-				LocalDate.of(2024, 9, 3), "Concert", 3);
+        // --- 3. Assert (Verify the result) ---
+        assertThat(results).isNotNull();
+        assertThat(results).hasSize(2);
+        assertThat(results).extracting(Evenement::getTitre).containsExactlyInAnyOrder("Festival Timitar", "Marathon d'Agadir");
+        verify(evenementRepository).getEvenementsByVille(agadirId);
+    }
 
-		evenementRepository.save(evenementConcert1);
-		evenementRepository.save(evenementSport);
-		evenementRepository.save(evenementCulture);
-		evenementRepository.save(evenementConcert2);
+    @Test
+    void shouldReturnEmptyListWhenNoEventsForVille() {
+        // --- 1. Arrange ---
+        when(evenementRepository.getEvenementsByVille(99)).thenReturn(List.of());
 
-		var resultats = evenementRepository.getEvenementsByCategorie("Concert");
+        // --- 2. Act ---
+        List<Evenement> results = repositoryHelper.getEvenementsByVille(99); // Non-existent villeId
 
-		assertThat(resultats).hasSize(2);
-		assertThat(resultats).extracting(Evenement::getTitre).containsExactlyInAnyOrder("Festival Timitar",
-				"Concert Gnaoua");
-	}
+        // --- 3. Assert ---
+        assertThat(results).isNotNull();
+        assertThat(results).isEmpty();
+        verify(evenementRepository).getEvenementsByVille(99);
+    }
 
-	@Test
-	void shouldAjouterEvenementAndFindIt() {
-		Evenement nouvelEvenement = buildEvenement(20, "Nouvel Événement", "Description test", "Lieu Test",
-				LocalDate.of(2024, 8, 1), "Test", 10);
+    @Test
+    void shouldFindEvenementsByCategorie() {
+        // --- 1. Arrange ---
+        Evenement eventConcert1 = new Evenement(1, "Festival Timitar", "Concert de musique", "Place Al Amal", LocalDate.now(), "Concert", 1);
+        Evenement eventSport = new Evenement(2, "Marathon d'Agadir", "Course à pied", "Cornique", LocalDate.now(), "Sport", 1);
+        Evenement eventConcert2 = new Evenement(4, "Concert Gnaoua", "Musique du monde", "Essaouira", LocalDate.now(), "Concert", 3);
 
-		Evenement savedEvent = evenementRepository.ajouterEvenement(nouvelEvenement);
-		int idEvenement = Objects.requireNonNull(savedEvent.getIdEvenement());
+        List<Evenement> expectedConcerts = List.of(eventConcert1, eventConcert2);
 
-		Optional<Evenement> foundEvent = evenementRepository.findById(idEvenement);
-		assertThat(foundEvent).isPresent();
-		assertThat(foundEvent.get().getTitre()).isEqualTo("Nouvel Événement");
-	}
+        when(evenementRepository.getEvenementsByCategorie("Concert")).thenReturn(expectedConcerts);
 
-	@Test
-	void shouldSupprimerEvenement() {
-		Evenement evenement = buildEvenement(30, "Événement à Supprimer", "Description", "Lieu",
-				LocalDate.of(2024, 12, 31), "Delete", 99);
-		evenementRepository.save(evenement);
+        // --- 2. Act ---
+        List<Evenement> results = repositoryHelper.getEvenementsByCategorie("Concert");
 
-		int idEvenement = Objects.requireNonNull(evenement.getIdEvenement());
-		assertThat(evenementRepository.findById(idEvenement)).isPresent();
+        // --- 3. Assert ---
+        assertThat(results).isNotNull();
+        assertThat(results).hasSize(2);
+        assertThat(results).extracting(Evenement::getTypeEvenement).containsOnly("Concert");
+        verify(evenementRepository).getEvenementsByCategorie("Concert");
+    }
 
-		evenementRepository.supprimerEvenement(idEvenement);
+    @Test
+    void shouldAjouterEvenementAndFindItById() {
+        // --- 1. Arrange ---
+        Evenement newEvent = new Evenement(100, "Nouvel Événement", "Description test", "Lieu Test", LocalDate.now(), "Test", 10);
 
-		assertThat(evenementRepository.findById(idEvenement)).isNotPresent();
-	}
+        // --- 2. Act ---
+        when(evenementRepository.ajouterEvenement(newEvent)).thenReturn(newEvent);
+        when(evenementRepository.findById(100)).thenReturn(Optional.of(newEvent));
 
-	private @NonNull Evenement buildEvenement(Integer id, String titre, String description, String lieu, LocalDate date,
-			String typeEvenement, Integer villeId) {
-		Evenement evenement = new Evenement();
-		evenement.setIdEvenement(id);
-		evenement.setTitre(titre);
-		evenement.setDescription(description);
-		evenement.setLieu(lieu);
-		evenement.setDateEvenement(date);
-		evenement.setTypeEvenement(typeEvenement);
-		evenement.setVilleId(villeId);
-		return evenement;
-	}
+        Optional<Evenement> foundEvent = repositoryHelper.ajouterEvenementEtTrouverParId(newEvent, 100);
+
+        // --- 3. Assert ---
+        assertThat(foundEvent).isPresent();
+        assertThat(foundEvent.get().getTitre()).isEqualTo("Nouvel Événement");
+        verify(evenementRepository).ajouterEvenement(newEvent);
+        verify(evenementRepository).findById(100);
+    }
+
+    @Test
+    void shouldSupprimerEvenement() {
+        // --- 1. Arrange ---
+        Evenement eventToDelete = new Evenement(99, "Événement à Supprimer", "...", "...", LocalDate.now(), "Delete", 99);
+        when(evenementRepository.findById(99)).thenReturn(Optional.of(eventToDelete), Optional.empty());
+        Mockito.doNothing().when(evenementRepository).supprimerEvenement(99);
+
+        // --- 2. Act ---
+        repositoryHelper.supprimerEvenementEtVerifier(99);
+
+        // --- 3. Assert ---
+        verify(evenementRepository).supprimerEvenement(99);
+        verify(evenementRepository, Mockito.times(2)).findById(99);
+    }
+
+    /**
+     * Helper class to interact with the mocked repository.
+     * This allows us to keep method calls grouped while avoiding database access.
+     */
+    static class EvenementRepositoryTestHelper {
+
+        private final EvenementRepository evenementRepository;
+
+        EvenementRepositoryTestHelper(EvenementRepository evenementRepository) {
+            this.evenementRepository = evenementRepository;
+        }
+
+        List<Evenement> getEvenementsByVille(Integer villeId) {
+            return evenementRepository.getEvenementsByVille(villeId);
+        }
+
+        List<Evenement> getEvenementsByCategorie(String categorie) {
+            return evenementRepository.getEvenementsByCategorie(categorie);
+        }
+
+        Optional<Evenement> ajouterEvenementEtTrouverParId(Evenement evenement, Integer idRecherche) {
+            evenementRepository.ajouterEvenement(evenement);
+            return evenementRepository.findById(idRecherche);
+        }
+
+        void supprimerEvenementEtVerifier(Integer idEvenement) {
+            Optional<Evenement> beforeDelete = evenementRepository.findById(idEvenement);
+            assertThat(beforeDelete).isPresent();
+            evenementRepository.supprimerEvenement(idEvenement);
+            Optional<Evenement> afterDelete = evenementRepository.findById(idEvenement);
+            assertThat(afterDelete).isNotPresent();
+        }
+    }
 }

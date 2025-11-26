@@ -8,6 +8,6 @@ import java.util.Optional;
 @Repository
 public interface VilleRepository extends MongoRepository<Ville, String>{
     Optional<Ville> findByNom(String nom);
-    Optional<Ville> findByRegion(String region);
+    // Optional<Ville> findByRegion(String region);
     
 }
