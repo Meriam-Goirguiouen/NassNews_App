@@ -330,7 +330,12 @@ const handleLogout = () => {
           </div>
           
           <div v-else-if="todaysNews.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <NewsCard v-for="news in todaysNews" :key="news.id" :news="news" />
+            <NewsCard 
+              v-for="news in todaysNews" 
+              :key="news.id" 
+              :news="news" 
+              :show-favorite-button="true"
+            />
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">

@@ -18,7 +18,7 @@ const searchQuery = ref('');
 // Favorite news (stored in localStorage for now)
 const favoriteNewsIds = ref<string[]>([]);
 
-onMounted(() => {
+onMounted(async () => {
   // Load favorites from localStorage
   const saved = localStorage.getItem('favoriteNews');
   if (saved) {
@@ -29,20 +29,45 @@ onMounted(() => {
     }
   }
   
-  // Load all news to display favorites
-  // In a real app, you'd fetch only favorite news from backend
-  if (newsStore.newsList.length === 0) {
-    // Fetch news if not already loaded
-    // This would need to be implemented based on your API
-  }
+  // Fetch all news from database
+  await newsStore.fetchAllNews();
 });
 
 // Filter news to show only favorites
 const favoriteNews = computed(() => {
-  return newsStore.newsList.filter(news => 
+  let filtered = newsStore.newsList.filter(news => 
     favoriteNewsIds.value.includes(String(news.id))
   );
+  
+  // Apply search filter if query exists
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(news =>
+      news.title.toLowerCase().includes(query) ||
+      news.summary.toLowerCase().includes(query) ||
+      (news.category && news.category.toLowerCase().includes(query))
+    );
+  }
+  
+  return filtered;
 });
+
+// Toggle favorite status
+const toggleFavorite = (newsId: string | number) => {
+  const idStr = String(newsId);
+  const index = favoriteNewsIds.value.indexOf(idStr);
+  if (index > -1) {
+    favoriteNewsIds.value.splice(index, 1);
+  } else {
+    favoriteNewsIds.value.push(idStr);
+  }
+  localStorage.setItem('favoriteNews', JSON.stringify(favoriteNewsIds.value));
+};
+
+// Check if news is favorited
+const isFavorited = (newsId: string | number) => {
+  return favoriteNewsIds.value.includes(String(newsId));
+};
 
 const handleLogout = () => {
   if (authStore.isAuthenticated) {
@@ -185,7 +210,16 @@ const navigateTo = (route: string) => {
           </div>
           
           <div v-else-if="favoriteNews.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <NewsCard v-for="news in favoriteNews" :key="news.id" :news="news" />
+            <div v-for="news in favoriteNews" :key="news.id" class="relative">
+              <NewsCard :news="news" />
+              <button
+                @click="toggleFavorite(news.id)"
+                class="absolute top-4 left-4 p-2 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors z-10"
+                :title="isFavorited(news.id) ? 'Remove from favorites' : 'Add to favorites'"
+              >
+                <Heart :size="20" :class="isFavorited(news.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'" />
+              </button>
+            </div>
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">

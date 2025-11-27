@@ -11,40 +11,74 @@ const authStore = useAuthStore();
 const cityStore = useCityStore();
 
 // Sidebar state
-const activeMenuItem = ref('cities');
 const searchQuery = ref('');
+const showAllCities = ref(false);
 
 // Favorite cities (stored in localStorage for now)
 const favoriteCityIds = ref<string[]>([]);
 
 onMounted(async () => {
-  // Load cities
+  // Load cities from database
   await cityStore.fetchCities();
   
   // Load favorites from localStorage
   const saved = localStorage.getItem('favoriteCities');
   if (saved) {
     try {
-      favoriteCityIds.value = JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Ensure it's an array and contains only strings
+      if (Array.isArray(parsed)) {
+        favoriteCityIds.value = parsed.map(id => String(id));
+        console.log('Loaded favorite city IDs:', favoriteCityIds.value);
+      } else {
+        console.warn('Invalid favorite cities format, resetting');
+        favoriteCityIds.value = [];
+      }
     } catch (e) {
       console.error('Error loading favorite cities:', e);
+      favoriteCityIds.value = [];
     }
+  } else {
+    favoriteCityIds.value = [];
   }
 });
 
 // Filter cities to show only favorites
 const favoriteCities = computed(() => {
-  return cityStore.cities.filter(city => 
-    favoriteCityIds.value.includes(city.id)
-  );
+  const favoriteIds = favoriteCityIds.value.map(id => String(id));
+  const filtered = cityStore.cities.filter(city => {
+    const cityIdStr = getCityId(city);
+    if (!cityIdStr) return false;
+    const isFavorite = favoriteIds.includes(cityIdStr);
+    return isFavorite;
+  });
+  return filtered;
 });
 
-// Filtered cities by search
+// Filtered favorite cities by search
 const filteredFavoriteCities = computed(() => {
-  if (!searchQuery.value) return favoriteCities.value;
-  return favoriteCities.value.filter(city =>
-    city.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+  let filtered = favoriteCities.value;
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(city =>
+      city.name.toLowerCase().includes(query) ||
+      city.region.toLowerCase().includes(query)
+    );
+  }
+  return filtered;
+});
+
+// All cities filtered by search (for browsing)
+const filteredAllCities = computed(() => {
+  let filtered = cityStore.cities;
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(city =>
+      city.name.toLowerCase().includes(query) ||
+      city.region.toLowerCase().includes(query)
+    );
+  }
+  return filtered;
 });
 
 const handleLogout = () => {
@@ -58,22 +92,97 @@ const navigateTo = (route: string) => {
   router.push(route);
 };
 
-const toggleFavorite = (cityId: string) => {
-  const index = favoriteCityIds.value.indexOf(cityId);
-  if (index > -1) {
-    favoriteCityIds.value.splice(index, 1);
-  } else {
-    favoriteCityIds.value.push(cityId);
+// Helper function to get city ID (handles both id and _id)
+const getCityId = (city: any): string => {
+  if (!city) {
+    console.error('City is null or undefined');
+    return '';
   }
+  const id = city.id || (city as any)._id;
+  if (!id) {
+    console.error('City missing ID:', city);
+    return '';
+  }
+  return String(id);
+};
+
+const toggleFavorite = (cityId: string | number | undefined) => {
+  // Check if cityId is valid
+  if (!cityId) {
+    console.error('City ID is undefined or null. City object:', cityId);
+    console.log('Available cities:', cityStore.cities.map(c => ({ id: c.id, name: c.name })));
+    return;
+  }
+  
+  // Ensure cityId is a string
+  const idStr = String(cityId).trim();
+  
+  if (!idStr || idStr === 'undefined' || idStr === 'null' || idStr === '') {
+    console.error('Invalid city ID after conversion:', cityId, '->', idStr);
+    return;
+  }
+  
+  console.log('Toggling favorite for city ID:', idStr);
+  console.log('Current favorites before:', [...favoriteCityIds.value]);
+  
+  // Verify this city exists
+  const cityExists = cityStore.cities.some(c => String(c.id) === idStr);
+  if (!cityExists) {
+    console.error('City ID not found in cities list:', idStr);
+    console.log('Available city IDs:', cityStore.cities.map(c => String(c.id)));
+    return;
+  }
+  
+  // Create a new array to ensure reactivity
+  const currentFavorites = [...favoriteCityIds.value];
+  const index = currentFavorites.indexOf(idStr);
+  
+  if (index > -1) {
+    // Remove from favorites
+    currentFavorites.splice(index, 1);
+    console.log('Removed city from favorites');
+  } else {
+    // Add to favorites - only add this one city
+    currentFavorites.push(idStr);
+    console.log('Added city to favorites');
+  }
+  
+  // Update the ref
+  favoriteCityIds.value = currentFavorites;
+  
+  console.log('Current favorites after:', [...favoriteCityIds.value]);
+  console.log('Favorites count:', favoriteCityIds.value.length);
+  
+  // Save to localStorage
   localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
 };
 
-const removeFavorite = (cityId: string) => {
-  const index = favoriteCityIds.value.indexOf(cityId);
+const removeFavorite = (cityId: string, event?: Event) => {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  
+  const idStr = String(cityId);
+  console.log('Removing favorite for city ID:', idStr);
+  console.log('Current favorites before:', [...favoriteCityIds.value]);
+  
+  const index = favoriteCityIds.value.indexOf(idStr);
   if (index > -1) {
     favoriteCityIds.value.splice(index, 1);
+    console.log('Removed city from favorites');
+    console.log('Current favorites after:', [...favoriteCityIds.value]);
     localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
+  } else {
+    console.warn('City ID not found in favorites:', idStr);
   }
+};
+
+// Check if city is favorited
+const isFavorited = (cityId: string | number | undefined) => {
+  if (!cityId) return false;
+  const idStr = String(cityId);
+  return favoriteCityIds.value.includes(idStr);
 };
 
 const selectCity = (cityId: string) => {
@@ -200,12 +309,65 @@ const selectCity = (cityId: string) => {
           <p class="text-gray-600">Manage your favorite cities for quick access</p>
         </div>
 
+        <!-- All Cities Section (when browsing) -->
+        <section v-if="showAllCities" class="mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold text-gray-900">All Cities</h2>
+            <button
+              @click="showAllCities = false"
+              class="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Show Favorites Only
+            </button>
+          </div>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+              v-for="city in filteredAllCities"
+              :key="`all-city-${getCityId(city)}`"
+              class="bg-white rounded-3xl p-6 shadow-md hover:shadow-lg transition-shadow relative"
+            >
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3 flex-1">
+                  <MapPin :size="24" class="text-[#7A1F1F]" />
+                  <div>
+                    <h3 class="text-xl font-bold text-gray-900">{{ city.name }}</h3>
+                    <p class="text-sm text-gray-500">{{ city.region }}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click.stop="toggleFavorite(getCityId(city))"
+                  class="p-2 rounded-lg transition-colors z-20 relative flex-shrink-0 cursor-pointer pointer-events-auto"
+                  :class="isFavorited(getCityId(city)) 
+                    ? 'text-red-500 hover:bg-red-50' 
+                    : 'text-gray-400 hover:bg-gray-50'"
+                  :title="isFavorited(getCityId(city)) ? 'Remove from favorites' : 'Add to favorites'"
+                >
+                  <Star :size="20" :class="isFavorited(getCityId(city)) ? 'fill-yellow-500 text-yellow-500' : ''" />
+                </button>
+              </div>
+              <div v-if="city.population" class="text-sm text-gray-600">
+                Population: {{ city.population.toLocaleString() }}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Favorite Cities Section -->
-        <section>
+        <section v-if="!showAllCities">
+          <div class="flex items-center justify-between mb-4">
+            <h2 v-if="filteredFavoriteCities.length > 0" class="text-2xl font-bold text-gray-900">Your Favorite Cities</h2>
+            <button
+              @click="showAllCities = true"
+              class="px-6 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
+            >
+              Browse Cities
+            </button>
+          </div>
           <div v-if="filteredFavoriteCities.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div
               v-for="city in filteredFavoriteCities"
-              :key="city.id"
+              :key="`fav-city-${city.id}`"
               class="bg-white rounded-3xl p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
               @click="selectCity(city.id)"
             >
@@ -218,8 +380,9 @@ const selectCity = (cityId: string) => {
                   </div>
                 </div>
                 <button
-                  @click.stop="removeFavorite(city.id)"
-                  class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  type="button"
+                  @click.stop.prevent="removeFavorite(String(city.id), $event)"
+                  class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors z-10 relative"
                   title="Remove from favorites"
                 >
                   <Trash2 :size="18" />
@@ -236,12 +399,12 @@ const selectCity = (cityId: string) => {
             <MapPin :size="48" class="mx-auto text-gray-300 mb-4" />
             <p class="text-gray-500 text-lg mb-2">No favorite cities</p>
             <p class="text-gray-400 text-sm mb-4">Add cities to your favorites for quick access</p>
-            <router-link
-              to="/feed"
+            <button
+              @click="showAllCities = true"
               class="inline-block px-6 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
             >
               Browse Cities
-            </router-link>
+            </button>
           </div>
         </section>
       </main>
