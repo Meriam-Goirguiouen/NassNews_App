@@ -150,7 +150,7 @@ const clearAllData = () => {
             <div class="flex items-center gap-4 ml-auto">
               <div class="flex items-center gap-2 text-gray-600">
                 <User :size="20" />
-                <span class="font-medium">{{ authStore.currentUser?.username || 'Utilisateur' }}</span>
+                <span class="font-medium">{{ authStore.currentUser?.username || 'User' }}</span>
               </div>
               <button
                 v-if="authStore.isAuthenticated"
@@ -158,14 +158,14 @@ const clearAllData = () => {
                 class="flex items-center gap-2 text-[#7A1F1F] hover:text-[#6A1A1A] transition-colors"
               >
                 <LogOut :size="20" />
-                <span class="font-medium">Déconnexion</span>
+                <span class="font-medium">Logout</span>
               </button>
               <router-link
                 v-else
                 to="/login"
                 class="flex items-center gap-2 text-[#7A1F1F] hover:text-[#6A1A1A] transition-colors"
               >
-                <span class="font-medium">Connexion</span>
+                <span class="font-medium">Login</span>
               </router-link>
             </div>
           </div>
@@ -175,8 +175,8 @@ const clearAllData = () => {
       <!-- Main Content -->
       <main class="p-6">
         <div class="mb-6">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">Paramètres</h1>
-          <p class="text-gray-600">Gérez vos préférences et paramètres de l'application</p>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+          <p class="text-gray-600">Manage your preferences and application settings</p>
         </div>
 
         <!-- Settings Sections -->
@@ -189,8 +189,8 @@ const clearAllData = () => {
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <p class="font-medium text-gray-900">Activer les notifications</p>
-                <p class="text-sm text-gray-500">Recevez des notifications pour les nouvelles actualités</p>
+                <p class="font-medium text-gray-900">Enable notifications</p>
+                <p class="text-sm text-gray-500">Receive notifications for new news articles</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input
@@ -211,8 +211,8 @@ const clearAllData = () => {
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <p class="font-medium text-gray-900">Détection automatique</p>
-                <p class="text-sm text-gray-500">Détecter automatiquement votre ville au démarrage</p>
+                <p class="font-medium text-gray-900">Auto-detect location</p>
+                <p class="text-sm text-gray-500">Automatically detect your city on startup</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input
@@ -233,7 +233,7 @@ const clearAllData = () => {
             </div>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Thème</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                 <div class="flex gap-4">
                   <button
                     @click="theme = 'light'"
@@ -245,7 +245,7 @@ const clearAllData = () => {
                     ]"
                   >
                     <Sun :size="18" />
-                    <span>Clair</span>
+                    <span>Light</span>
                   </button>
                   <button
                     @click="theme = 'dark'"
@@ -257,7 +257,7 @@ const clearAllData = () => {
                     ]"
                   >
                     <Moon :size="18" />
-                    <span>Sombre</span>
+                    <span>Dark</span>
                   </button>
                 </div>
               </div>
@@ -271,7 +271,7 @@ const clearAllData = () => {
               <h2 class="text-xl font-bold text-gray-900">Langue</h2>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Sélectionner la langue</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Select language</label>
               <select
                 v-model="language"
                 class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#7A1F1F] focus:outline-none"
@@ -287,11 +287,11 @@ const clearAllData = () => {
           <section v-if="authStore.isAuthenticated" class="bg-white rounded-3xl p-6 shadow-md">
             <div class="flex items-center gap-3 mb-4">
               <User :size="24" class="text-[#7A1F1F]" />
-              <h2 class="text-xl font-bold text-gray-900">Compte</h2>
+              <h2 class="text-xl font-bold text-gray-900">Account</h2>
             </div>
             <div class="space-y-3">
               <div>
-                <p class="text-sm text-gray-500">Nom d'utilisateur</p>
+                <p class="text-sm text-gray-500">Username</p>
                 <p class="font-medium text-gray-900">{{ authStore.currentUser?.username || 'N/A' }}</p>
               </div>
               <div>
@@ -303,16 +303,16 @@ const clearAllData = () => {
 
           <!-- Danger Zone -->
           <section class="bg-white rounded-3xl p-6 shadow-md border-2 border-red-200">
-            <h2 class="text-xl font-bold text-red-600 mb-4">Zone de danger</h2>
+            <h2 class="text-xl font-bold text-red-600 mb-4">Danger Zone</h2>
             <div class="space-y-4">
               <div>
-                <p class="font-medium text-gray-900 mb-2">Effacer toutes les données locales</p>
-                <p class="text-sm text-gray-500 mb-3">Supprime tous vos favoris, historique et préférences stockés localement</p>
+                <p class="font-medium text-gray-900 mb-2">Clear all local data</p>
+                <p class="text-sm text-gray-500 mb-3">Deletes all your favorites, history, and locally stored preferences</p>
                 <button
                   @click="clearAllData"
                   class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
-                  Effacer les données
+                  Clear Data
                 </button>
               </div>
             </div>
@@ -324,7 +324,7 @@ const clearAllData = () => {
               @click="saveSettings"
               class="px-6 py-3 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors font-medium"
             >
-              Enregistrer les paramètres
+              Save Settings
             </button>
           </div>
         </div>

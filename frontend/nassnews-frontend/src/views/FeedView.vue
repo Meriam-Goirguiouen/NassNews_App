@@ -161,7 +161,7 @@ const handleLogout = () => {
             ]"
           >
             <Home :size="20" />
-            <span class="font-medium">Accueil</span>
+            <span class="font-medium">Home</span>
           </button>
 
           <button
@@ -174,7 +174,7 @@ const handleLogout = () => {
             ]"
           >
             <Heart :size="20" />
-            <span class="font-medium">Actualités Favoris</span>
+            <span class="font-medium">Favorite News</span>
           </button>
 
           <button
@@ -187,7 +187,7 @@ const handleLogout = () => {
             ]"
           >
             <History :size="20" />
-            <span class="font-medium">Historique</span>
+            <span class="font-medium">History</span>
           </button>
 
           <button
@@ -200,7 +200,7 @@ const handleLogout = () => {
             ]"
           >
             <MapPin :size="20" />
-            <span class="font-medium">Villes Favorites</span>
+            <span class="font-medium">Favorite Cities</span>
           </button>
 
           <button
@@ -213,7 +213,7 @@ const handleLogout = () => {
             ]"
           >
             <Settings :size="20" />
-            <span class="font-medium">Paramètres</span>
+            <span class="font-medium">Settings</span>
           </button>
         </nav>
       </div>
@@ -231,7 +231,7 @@ const handleLogout = () => {
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Rechercher des actualités par ville..."
+                placeholder="Search news by city..."
                 class="w-full pl-12 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none transition-colors"
               />
               <!-- City Dropdown -->
@@ -251,7 +251,7 @@ const handleLogout = () => {
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-2 text-gray-600">
                 <User :size="20" />
-                <span class="font-medium">{{ authStore.currentUser?.username || 'Utilisateur' }}</span>
+                <span class="font-medium">{{ authStore.currentUser?.username || 'User' }}</span>
               </div>
               <button
                 v-if="authStore.isAuthenticated"
@@ -259,14 +259,14 @@ const handleLogout = () => {
                 class="flex items-center gap-2 text-[#7A1F1F] hover:text-[#6A1A1A] transition-colors"
               >
                 <LogOut :size="20" />
-                <span class="font-medium">Déconnexion</span>
+                <span class="font-medium">Logout</span>
               </button>
               <router-link
                 v-else
                 to="/login"
                 class="flex items-center gap-2 text-[#7A1F1F] hover:text-[#6A1A1A] transition-colors"
               >
-                <span class="font-medium">Connexion</span>
+                <span class="font-medium">Login</span>
               </router-link>
             </div>
           </div>
@@ -280,8 +280,8 @@ const handleLogout = () => {
           <div v-if="detectingLocation" class="flex items-center gap-3">
             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#7A1F1F]"></div>
             <div>
-              <p class="text-sm text-gray-500">Détection de votre localisation...</p>
-              <p class="text-sm text-gray-400">Veuillez patienter</p>
+              <p class="text-sm text-gray-500">Detecting your location...</p>
+              <p class="text-sm text-gray-400">Please wait</p>
             </div>
           </div>
           
@@ -297,32 +297,32 @@ const handleLogout = () => {
               @click="detectUserLocation"
               class="px-4 py-2 text-sm bg-[#7A1F1F] text-white rounded-lg hover:bg-[#7A1F1F]/90 transition-colors"
             >
-              Réessayer
+              Retry
             </button>
           </div>
           
           <div v-else-if="currentCity" class="flex items-center gap-3">
             <MapPin :size="24" class="text-[#7A1F1F]" />
             <div class="flex-1">
-              <p class="text-sm text-gray-500">Votre localisation</p>
+              <p class="text-sm text-gray-500">Your location</p>
               <p class="text-xl font-bold text-gray-900">{{ currentCity.name }}, {{ currentCity.region }}</p>
             </div>
             <button
               @click="detectUserLocation"
               class="px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              title="Mettre à jour la localisation"
+              title="Update location"
             >
-              Actualiser
+              Refresh
             </button>
           </div>
         </div>
 
         <!-- Today's News Section -->
         <section class="mb-8">
-          <h2 class="text-3xl font-bold text-gray-900 mb-6">Actualités du Jour</h2>
+          <h2 class="text-3xl font-bold text-gray-900 mb-6">Today's News</h2>
           
           <div v-if="newsStore.loading" class="text-center py-12">
-            <p class="text-gray-500">Chargement des actualités...</p>
+            <p class="text-gray-500">Loading news...</p>
           </div>
           
           <div v-else-if="newsStore.error" class="bg-red-50 text-red-600 p-4 rounded-xl">
@@ -334,16 +334,16 @@ const handleLogout = () => {
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">
-            <p class="text-gray-500">Aucune actualité aujourd'hui pour {{ currentCity?.name }}</p>
+            <p class="text-gray-500">No news today for {{ currentCity?.name }}</p>
           </div>
         </section>
 
         <!-- Events Section -->
         <section>
-          <h2 class="text-3xl font-bold text-gray-900 mb-6">Événements à Venir</h2>
+          <h2 class="text-3xl font-bold text-gray-900 mb-6">Upcoming Events</h2>
           
           <div v-if="eventStore.loading" class="text-center py-12">
-            <p class="text-gray-500">Chargement des événements...</p>
+            <p class="text-gray-500">Loading events...</p>
           </div>
           
           <div v-else-if="eventStore.error" class="bg-red-50 text-red-600 p-4 rounded-xl">
@@ -355,7 +355,7 @@ const handleLogout = () => {
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">
-            <p class="text-gray-500">Aucun événement à venir pour {{ currentCity?.name }}</p>
+            <p class="text-gray-500">No upcoming events for {{ currentCity?.name }}</p>
           </div>
         </section>
       </main>
