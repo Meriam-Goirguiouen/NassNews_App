@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Evenement {
 
 	@Id
-	private Integer idEvenement;
+	private String idEvenement;
 
 	private String titre;
 
@@ -21,14 +21,14 @@ public class Evenement {
 
 	private String typeEvenement; // categorie/type
 
-	private Integer villeId; // to support filtering by city without modeling Ville entity yet
+	private String villeId; // MongoDB ObjectId string to match Ville._id format
 	
     // Add this no-argument constructor (required by frameworks like Spring Data)
     public Evenement() {
     }
 
     // Add this constructor for easily creating objects in your code and tests
-    public Evenement(Integer idEvenement, String titre, String description, String lieu, LocalDate dateEvenement, String typeEvenement, Integer villeId) {
+    public Evenement(String idEvenement, String titre, String description, String lieu, LocalDate dateEvenement, String typeEvenement, String villeId) {
         this.idEvenement = idEvenement;
         this.titre = titre;
         this.description = description;
@@ -37,11 +37,11 @@ public class Evenement {
         this.typeEvenement = typeEvenement;
         this.villeId = villeId;
     }
-	public Integer getIdEvenement() {
+	public String getIdEvenement() {
 		return idEvenement;
 	}
 
-	public void setIdEvenement(Integer idEvenement) {
+	public void setIdEvenement(String idEvenement) {
 		this.idEvenement = idEvenement;
 	}
 
@@ -85,11 +85,11 @@ public class Evenement {
 		this.typeEvenement = typeEvenement;
 	}
 
-	public Integer getVilleId() {
+	public String getVilleId() {
 		return villeId;
 	}
 
-	public void setVilleId(Integer villeId) {
+	public void setVilleId(String villeId) {
 		this.villeId = villeId;
 	}
 }

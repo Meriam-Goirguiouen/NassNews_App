@@ -33,24 +33,24 @@ class EvenementServiceTest {
     @Test
     void shouldReturnEvenementsWhenGetByVilleIsCalled() {
         // Given (Arrange)
-        Evenement event1 = new Evenement(1, "Event A", "...", "Agadir", LocalDate.now(), "Concert", 1);
-        given(evenementRepository.getEvenementsByVille(1)).willReturn(List.of(event1));
+        Evenement event1 = new Evenement("event1", "Event A", "...", "Agadir", LocalDate.now(), "Concert", "ville1");
+        given(evenementRepository.getEvenementsByVille("ville1")).willReturn(List.of(event1));
 
         // When (Act)
-        List<Evenement> events = evenementService.getEvenementsByVille(1);
+        List<Evenement> events = evenementService.getEvenementsByVille("ville1");
 
         // Then (Assert)
         assertThat(events).isNotNull();
         assertThat(events).hasSize(1);
-        verify(evenementRepository).getEvenementsByVille(1); // Verify repository was called
+        verify(evenementRepository).getEvenementsByVille("ville1"); // Verify repository was called
     }
 
     @Test
     void shouldCreateEvenementSuccessfully() {
         // Given
-        Evenement eventToCreate = new Evenement(100, "New Event", "...", "...", LocalDate.now(), "Test", 10);
-        Ville mockVille = new Ville("10", "Test City", "0,0");
-        given(villeService.getVilleById("10")).willReturn(Optional.of(mockVille));
+        Evenement eventToCreate = new Evenement("event100", "New Event", "...", "...", LocalDate.now(), "Test", "ville10");
+        Ville mockVille = new Ville("ville10", "Test City", "0,0");
+        given(villeService.getVilleById("ville10")).willReturn(Optional.of(mockVille));
         given(evenementRepository.ajouterEvenement(eventToCreate)).willReturn(eventToCreate);
 
         // When
@@ -59,14 +59,14 @@ class EvenementServiceTest {
         // Then
         assertThat(createdEvent).isNotNull();
         assertThat(createdEvent.getTitre()).isEqualTo("New Event");
-        verify(villeService).getVilleById("10");
+        verify(villeService).getVilleById("ville10");
         verify(evenementRepository).ajouterEvenement(eventToCreate);
     }
 
     @Test
     void shouldReturnTrueWhenDeletingExistingEvent() {
         // Given
-        Integer eventId = 1;
+        String eventId = "event1";
         given(evenementRepository.existsById(eventId)).willReturn(true);
 
         // When
@@ -80,7 +80,7 @@ class EvenementServiceTest {
     @Test
     void shouldReturnFalseWhenDeletingNonExistingEvent() {
         // Given
-        Integer eventId = 99;
+        String eventId = "nonexistent";
         given(evenementRepository.existsById(eventId)).willReturn(false);
 
         // When

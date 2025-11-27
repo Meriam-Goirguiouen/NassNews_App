@@ -1,66 +1,139 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useCityStore } from '../../stores/city';
+import { useEventStore } from '../../stores/event';
 import { useRouter } from 'vue-router';
-import { Calendar, MessageSquare, Plus, LogOut, BarChart3, AlertCircle, MapPin, Clock, X, Building2 } from 'lucide-vue-next';
+import { Calendar, MessageSquare, Plus, LogOut, BarChart3, AlertCircle, MapPin, Clock, X, Building2, Edit, Trash2 } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const cityStore = useCityStore();
+const eventStore = useEventStore();
 const router = useRouter();
 const showAddEventMenu = ref(false);
+const showEditEventMenu = ref(false);
 const activeMenuItem = ref('dashboard');
+const editingEventId = ref<string | null>(null);
+const detectedCity = ref<{ id: string; name: string; region: string } | null>(null);
+const detectingLocation = ref(false);
+const locationError = ref<string | null>(null);
+const lastDetectedCoords = ref<{ latitude: number; longitude: number } | null>(null);
 
 // Event form data - matching Evenement entity fields
+// Note: villeId is no longer in the form - it's automatically set from detected location
 const eventForm = ref({
   titre: '',        // maps to titre in Evenement
   description: '',  // maps to description in Evenement
   lieu: '',         // maps to lieu in Evenement
   dateEvenement: '', // maps to dateEvenement in Evenement
   typeEvenement: '', // maps to typeEvenement in Evenement
-  villeId: null as number | null // maps to villeId in Evenement
 });
 
 const eventTypes = ['Cultural', 'Sports', 'Public', 'Educational', 'Entertainment', 'Business', 'Other'];
 const formErrors = ref<Record<string, string>>({});
 
-// Mock data for events created by this admin
-const adminEvents = ref([
-  {
-    id: 1,
-    title: 'Community Festival 2025',
-    date: '2025-03-15',
-    location: 'City Center',
-    type: 'Cultural',
-    status: 'Upcoming'
-  },
-  {
-    id: 2,
-    title: 'Local Sports Tournament',
-    date: '2025-02-20',
-    location: 'Sports Complex',
-    type: 'Sports',
-    status: 'Upcoming'
-  },
-  {
-    id: 3,
-    title: 'Town Hall Meeting',
-    date: '2025-01-10',
-    location: 'City Hall',
-    type: 'Public',
-    status: 'Completed'
-  }
-]);
+// Computed properties for events
+const adminEvents = computed(() => eventStore.eventsList);
+const adminCityId = computed(() => authStore.currentUser?.cityId || cityStore.currentCityId);
 
-// Fetch cities on mount
+// Detect user location and city
+const detectUserLocation = async () => {
+  if (!navigator.geolocation) {
+    locationError.value = 'Geolocation is not supported by your browser';
+    return;
+  }
+
+  detectingLocation.value = true;
+  locationError.value = null;
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        // Store coordinates for later use
+        lastDetectedCoords.value = { latitude, longitude };
+        
+        console.log('Calling detectCityFromLocation with:', { latitude, longitude });
+        const city = await cityStore.detectCityFromLocation(latitude, longitude);
+        console.log('detectCityFromLocation returned:', city);
+        console.log('cityStore.error:', cityStore.error);
+        
+        if (city && city.id) {
+          detectedCity.value = {
+            id: city.id,
+            name: city.name,
+            region: city.region
+          };
+          
+          // Ensure currentCityId is set
+          if (cityStore.currentCityId !== city.id) {
+            cityStore.setCurrentCity(city.id);
+          }
+          
+          console.log('City detected and set:', { 
+            detectedCity: detectedCity.value, 
+            currentCityId: cityStore.currentCityId,
+            currentCity: cityStore.currentCity 
+          });
+          
+          // Clear any previous errors
+          locationError.value = null;
+          
+          // Fetch events for the detected city
+          await eventStore.fetchByCityId(city.id);
+        } else {
+          // Show more specific error message
+          const errorMsg = cityStore.error || 'Could not detect your city from coordinates.';
+          locationError.value = `${errorMsg} (Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)})`;
+          console.error('City detection failed:', {
+            city,
+            error: cityStore.error,
+            coordinates: { latitude, longitude }
+          });
+        }
+      } catch (err: any) {
+        console.error('Error detecting city:', err);
+        locationError.value = 'Failed to detect city. Please select manually.';
+      } finally {
+        detectingLocation.value = false;
+      }
+    },
+    (error) => {
+      console.error('Geolocation error:', error);
+      locationError.value = 'Location access denied. Please select your city manually.';
+      detectingLocation.value = false;
+      
+      // Fallback to saved city or first available city
+      const adminCityIdValue = adminCityId.value ? String(adminCityId.value) : null;
+      const defaultCityId = adminCityIdValue || cityStore.currentCityId || (cityStore.cities.length > 0 ? cityStore.cities[0].id : null);
+      if (defaultCityId) {
+        eventStore.fetchByCityId(String(defaultCityId));
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+};
+
+// Fetch cities and events on mount
 onMounted(async () => {
   await cityStore.fetchCities();
   cityStore.loadSavedCity();
-  // Set default city if available
-  if (cityStore.currentCityId) {
-    eventForm.value.villeId = cityStore.currentCityId;
-  } else if (cityStore.cities.length > 0) {
-    eventForm.value.villeId = cityStore.cities[0].id;
+  
+  // Try to detect location first
+  await detectUserLocation();
+  
+  // If location detection failed or no city detected, use fallback
+  if (!detectedCity.value) {
+    const adminCityIdValue = adminCityId.value ? String(adminCityId.value) : null;
+    const defaultCityId = adminCityIdValue || cityStore.currentCityId || (cityStore.cities.length > 0 ? cityStore.cities[0].id : null);
+    if (defaultCityId) {
+      // Fetch events for this city
+      await eventStore.fetchByCityId(String(defaultCityId));
+    }
   }
 
   // Set up scroll observer to update active menu item
@@ -124,70 +197,277 @@ const validateForm = () => {
     isValid = false;
   }
 
-  if (!eventForm.value.villeId) {
-    formErrors.value.villeId = 'City is required';
-    isValid = false;
-  }
+  // City validation is no longer needed - it's automatically set from detected location
 
   return isValid;
 };
 
 const handleSubmit = async () => {
+  // Clear any previous errors
+  formErrors.value = {};
+  
   if (!validateForm()) {
     return;
   }
 
   try {
-    // API call matching Evenement entity structure
-    const response = await fetch('http://localhost:8080/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    // Automatically use the detected city or current city
+    let villeIdForBackend: string = '';
+    
+    // For editing, keep the original city; for new events, use detected city
+    if (editingEventId.value) {
+      // When editing, find the original event to get its city
+      const originalEvent = eventStore.eventsList.find(e => e.id === editingEventId.value);
+      if (originalEvent && originalEvent.cityId) {
+        villeIdForBackend = String(originalEvent.cityId);
+      } else {
+        // Fallback to detected city if original event not found
+        villeIdForBackend = detectedCity.value?.id || cityStore.currentCity?.id || '';
+      }
+    } else {
+      // For new events, use detected city
+      console.log('Checking for city...', {
+        detectedCity: detectedCity.value,
+        currentCity: cityStore.currentCity,
+        currentCityId: cityStore.currentCityId,
+        citiesCount: cityStore.cities.length,
+        cities: cityStore.cities.map(c => ({ id: c.id, name: c.name }))
+      });
+      
+      // Priority 1: Use detectedCity.value.id if available
+      if (detectedCity.value && detectedCity.value.id) {
+        villeIdForBackend = detectedCity.value.id;
+        console.log('✓ Using detected city ID:', villeIdForBackend);
+      }
+      // Priority 2: Use currentCity from store (set by detectCityFromLocation) - check this before currentCityId
+      else if (cityStore.currentCity) {
+        // Log currentCity details for debugging
+        console.log('currentCity exists:', {
+          currentCity: cityStore.currentCity,
+          currentCityId: cityStore.currentCity.id,
+          currentCityIdType: typeof cityStore.currentCity.id,
+          currentCityKeys: Object.keys(cityStore.currentCity || {})
+        });
+        
+        if (cityStore.currentCity.id) {
+          villeIdForBackend = cityStore.currentCity.id;
+          // Update detectedCity to match
+          if (detectedCity.value) {
+            detectedCity.value.id = cityStore.currentCity.id;
+          }
+          console.log('✓ Using current city from store:', cityStore.currentCity);
+        } else {
+          console.warn('currentCity exists but has no id:', cityStore.currentCity);
+        }
+      }
+      // Priority 3: Use currentCityId from store (most reliable - set by detectCityFromLocation)
+      else if (cityStore.currentCityId) {
+        villeIdForBackend = cityStore.currentCityId;
+        // Update detectedCity to have the ID
+        if (detectedCity.value) {
+          detectedCity.value.id = cityStore.currentCityId;
+        }
+        console.log('✓ Using currentCityId from store:', villeIdForBackend);
+      }
+      // Priority 4: Find city by name if detectedCity has name but no ID
+      else if (detectedCity.value && detectedCity.value.name) {
+        console.log('Attempting to find city by name:', detectedCity.value.name);
+        console.log('Available cities:', cityStore.cities.map(c => ({ id: c.id, name: c.name, nameLength: c.name.length })));
+        
+        // Normalize strings for comparison (remove diacritics, normalize Unicode)
+        const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const detectedNameNormalized = normalize(detectedCity.value.name);
+        
+        // Try exact match first (including whitespace)
+        let foundCity = cityStore.cities.find(c => {
+          const match = c.name === detectedCity.value!.name;
+          if (match) console.log('Exact match found:', c);
+          return match;
+        });
+        
+        // If not found, try normalized match
+        if (!foundCity) {
+          foundCity = cityStore.cities.find(c => {
+            const match = normalize(c.name) === detectedNameNormalized;
+            if (match) console.log('Normalized match found:', c);
+            return match;
+          });
+        }
+        
+        // If not found, try case-insensitive exact match
+        if (!foundCity) {
+          foundCity = cityStore.cities.find(c => {
+            const match = c.name.toLowerCase().trim() === detectedCity.value!.name.toLowerCase().trim();
+            if (match) console.log('Case-insensitive match found:', c);
+            return match;
+          });
+        }
+        
+        // If still not found, try matching the first word (base name)
+        if (!foundCity) {
+          const baseName = detectedCity.value.name.split(/\s+/)[0].trim();
+          console.log('Trying base name match:', baseName);
+          foundCity = cityStore.cities.find(c => {
+            const cityBaseName = c.name.split(/\s+/)[0].trim();
+            const match = cityBaseName.toLowerCase() === baseName.toLowerCase() ||
+                   c.name.toLowerCase().includes(baseName.toLowerCase()) ||
+                   baseName.toLowerCase().includes(cityBaseName.toLowerCase());
+            if (match) console.log('Base name match found:', c);
+            return match;
+          });
+        }
+        
+        if (foundCity && foundCity.id) {
+          villeIdForBackend = foundCity.id;
+          // Update detectedCity with the ID
+          detectedCity.value.id = foundCity.id;
+          // Also update currentCityId in store
+          cityStore.setCurrentCity(foundCity.id);
+          console.log('✓ Found city by name:', foundCity);
+        } else {
+          console.warn('City not found by name:', detectedCity.value.name, 'Available cities:', cityStore.cities.map(c => c.name));
+        }
+      }
+      
+      if (!villeIdForBackend) {
+        // Last resort: use stored coordinates if available, otherwise try to detect again
+        console.log('No city found, attempting to use stored coordinates or detect location...');
+        
+        if (lastDetectedCoords.value) {
+          // Use previously detected coordinates
+          console.log('Using stored coordinates:', lastDetectedCoords.value);
+          try {
+            const detected = await cityStore.detectCityFromLocation(
+              lastDetectedCoords.value.latitude,
+              lastDetectedCoords.value.longitude
+            );
+            
+            if (detected && detected.id) {
+              villeIdForBackend = detected.id;
+              detectedCity.value = {
+                id: detected.id,
+                name: detected.name,
+                region: detected.region
+              };
+              console.log('✓ City detected from stored coordinates:', detectedCity.value);
+            } else {
+              throw new Error('Could not detect city from stored coordinates.');
+            }
+          } catch (err: any) {
+            console.error('Error using stored coordinates:', err);
+            // Fall through to try geolocation again
+          }
+        }
+        
+        // If stored coordinates didn't work, try geolocation
+        if (!villeIdForBackend && navigator.geolocation) {
+          try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+              });
+            });
+            
+            const detected = await cityStore.detectCityFromLocation(
+              position.coords.latitude,
+              position.coords.longitude
+            );
+            
+            if (detected && detected.id) {
+              villeIdForBackend = detected.id;
+              detectedCity.value = {
+                id: detected.id,
+                name: detected.name,
+                region: detected.region
+              };
+              console.log('✓ City detected from geolocation:', detectedCity.value);
+            } else {
+              throw new Error('Could not detect your location. Please allow location access.');
+            }
+          } catch (geoError: any) {
+            console.error('Geolocation error during submit:', geoError);
+            throw new Error('Could not detect your location. Please allow location access.');
+          }
+        } else if (!villeIdForBackend) {
+          throw new Error('Location services are not available. Please enable location access.');
+        }
+      }
+    }
+    
+    console.log('Final villeIdForBackend:', villeIdForBackend);
+    
+    if (!villeIdForBackend || villeIdForBackend.trim() === '') {
+      throw new Error('City is required. Please allow location access to detect your city.');
+    }
+
+    if (editingEventId.value) {
+      // Update existing event (keep original city)
+      await eventStore.updateEvent(editingEventId.value, {
         titre: eventForm.value.titre,
         description: eventForm.value.description,
         lieu: eventForm.value.lieu,
         dateEvenement: eventForm.value.dateEvenement,
         typeEvenement: eventForm.value.typeEvenement,
-        villeId: eventForm.value.villeId
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to create event');
+        villeId: villeIdForBackend
+      });
+    } else {
+      // Create new event (use detected city)
+      await eventStore.createEvent({
+        titre: eventForm.value.titre,
+        description: eventForm.value.description,
+        lieu: eventForm.value.lieu,
+        dateEvenement: eventForm.value.dateEvenement,
+        typeEvenement: eventForm.value.typeEvenement,
+        villeId: villeIdForBackend
+      });
     }
 
-    const createdEvent = await response.json();
-    
-    // Add to local array with mapped fields for display
-    const newEvent = {
-      id: createdEvent.idEvenement || adminEvents.value.length + 1,
-      title: createdEvent.titre,
-      date: createdEvent.dateEvenement,
-      location: createdEvent.lieu,
-      type: createdEvent.typeEvenement,
-      status: new Date(createdEvent.dateEvenement) >= new Date() ? 'Upcoming' : 'Completed'
-    };
-    
-    adminEvents.value.unshift(newEvent);
-  } catch (error) {
-    console.error('Error creating event:', error);
-    alert('Failed to create event. Please try again.');
+    // Reset form and close modal
+    resetForm();
+    showAddEventMenu.value = false;
+    showEditEventMenu.value = false;
+    editingEventId.value = null;
+  } catch (error: any) {
+    console.error('Error saving event:', error);
+    alert(error.message || 'Failed to save event. Please try again.');
+  }
+};
+
+const handleEdit = (event: any) => {
+  editingEventId.value = event.id;
+  eventForm.value = {
+    titre: event.title,
+    description: event.description || '',
+    lieu: event.location,
+    dateEvenement: event.date.split('T')[0], // Extract date part if it includes time
+    typeEvenement: event.type,
+  };
+  showAddEventMenu.value = true; // Show the modal
+};
+
+const handleDelete = async (eventId: string) => {
+  if (!confirm('Are you sure you want to delete this event?')) {
     return;
   }
 
-  // Reset form and close modal
-  resetForm();
-  showAddEventMenu.value = false;
+  try {
+    await eventStore.deleteEvent(eventId);
+  } catch (error: any) {
+    console.error('Error deleting event:', error);
+    alert(error.message || 'Failed to delete event. Please try again.');
+  }
 };
 
 const resetForm = () => {
+  editingEventId.value = null;
   eventForm.value = {
     titre: '',
     description: '',
     lieu: '',
     dateEvenement: '',
     typeEvenement: '',
-    villeId: cityStore.currentCityId || (cityStore.cities.length > 0 ? cityStore.cities[0].id : null)
   };
   formErrors.value = {};
 };
@@ -195,6 +475,7 @@ const resetForm = () => {
 const closeModal = () => {
   resetForm();
   showAddEventMenu.value = false;
+  showEditEventMenu.value = false;
 };
 
 const scrollToSection = (sectionId: string, menuItem: string) => {
@@ -219,6 +500,8 @@ const goToDashboard = () => {
 const goToMyEvents = () => {
   scrollToSection('events-section', 'my-events');
 };
+
+// No need to watch villeId anymore - it's automatic
 </script>
 
 <template>
@@ -226,7 +509,7 @@ const goToMyEvents = () => {
     <!-- Sidebar Menu -->
     <aside class="w-64 bg-white shadow-lg fixed h-full z-40">
       <div class="p-6 border-b border-gray-200">
-        <router-link to="/" class="text-2xl font-bold text-[#7A1F1F]">NassNews</router-link>
+          <router-link to="/" class="text-2xl font-bold text-[#7A1F1F]">NassNews</router-link>
       </div>
       
       <nav class="p-4 space-y-2">
@@ -290,7 +573,34 @@ const goToMyEvents = () => {
           <!-- Header -->
           <div class="mb-8">
             <h1 class="text-4xl font-bold text-[#7A1F1F] mb-2">Communal Dashboard</h1>
-            <p class="text-lg text-[#5F6B61]">Manage events and monitor comments for your location</p>
+            <p class="text-lg text-[#5F6B61] mb-4">Manage events and monitor comments for your location</p>
+            
+            <!-- Detected City Display -->
+            <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-[#7A1F1F]">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <MapPin class="w-5 h-5 text-[#7A1F1F]" />
+                  <div class="text-gray-700">
+                    <span v-if="detectingLocation">Detecting your location...</span>
+                    <span v-else-if="detectedCity">
+                      Managing events for: {{ detectedCity.name }}, {{ detectedCity.region }}
+                    </span>
+                    <span v-else-if="locationError">{{ locationError }}</span>
+                    <span v-else-if="cityStore.currentCity">
+                      Managing events for: {{ cityStore.currentCity.name }}, {{ cityStore.currentCity.region }}
+                    </span>
+                    <span v-else>Please select your city</span>
+                  </div>
+                </div>
+                <button
+                  v-if="!detectedCity && !detectingLocation && !locationError"
+                  @click="detectUserLocation"
+                  class="px-4 py-2 text-sm bg-[#7A1F1F] text-white rounded-lg hover:bg-[#7A1F1F]/90 transition-colors"
+                >
+                  Detect Location
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Statistics at Top -->
@@ -309,7 +619,12 @@ const goToMyEvents = () => {
               <Clock class="w-5 h-5 text-[#7A1F1F]" />
             </div>
             <div class="text-3xl font-bold text-[#7A1F1F]">
-              {{ adminEvents.filter((e: any) => e.status === 'Upcoming').length }}
+              {{ adminEvents.filter((e: any) => {
+                const eventDate = new Date(e.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return eventDate >= today;
+              }).length }}
             </div>
           </div>
           
@@ -327,7 +642,12 @@ const goToMyEvents = () => {
               <BarChart3 class="w-5 h-5 text-[#7A1F1F]" />
             </div>
             <div class="text-3xl font-bold text-[#7A1F1F]">
-              {{ adminEvents.filter((e: any) => e.status === 'Completed').length }}
+              {{ adminEvents.filter((e: any) => {
+                const eventDate = new Date(e.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return eventDate < today;
+              }).length }}
             </div>
           </div>
         </div>
@@ -337,7 +657,7 @@ const goToMyEvents = () => {
         <div id="events-section" class="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div class="bg-gradient-to-r from-[#7A1F1F] to-[#7A1F1F]/90 p-6">
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4">
                 <div class="bg-white/20 rounded-full p-3">
                   <Calendar class="w-8 h-8 text-white" />
                 </div>
@@ -350,7 +670,17 @@ const goToMyEvents = () => {
           </div>
           
           <div class="p-6">
-            <div v-if="adminEvents.length === 0" class="text-center py-12">
+            <div v-if="eventStore.loading" class="text-center py-12">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#7A1F1F]"></div>
+              <p class="text-gray-500 mt-4">Loading events...</p>
+            </div>
+            
+            <div v-else-if="eventStore.error" class="text-center py-12">
+              <AlertCircle class="w-16 h-16 text-red-300 mx-auto mb-4" />
+              <p class="text-red-500 text-lg">{{ eventStore.error }}</p>
+            </div>
+            
+            <div v-else-if="adminEvents.length === 0" class="text-center py-12">
               <Calendar class="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p class="text-gray-500 text-lg">No events created yet</p>
               <p class="text-gray-400 text-sm mt-2">Click "Add Event" to create your first event</p>
@@ -369,14 +699,28 @@ const goToMyEvents = () => {
                       <span
                         :class="[
                           'px-3 py-1 rounded-full text-xs font-semibold',
-                          event.status === 'Upcoming' 
+                          (() => {
+                            const eventDate = new Date(event.date);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return eventDate >= today;
+                          })()
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-gray-100 text-gray-700'
                         ]"
                       >
-                        {{ event.status }}
+                        {{
+                          (() => {
+                            const eventDate = new Date(event.date);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return eventDate >= today ? 'Upcoming' : 'Completed';
+                          })()
+                        }}
                       </span>
                     </div>
+                    
+                    <p v-if="event.description" class="text-gray-600 text-sm mb-4 line-clamp-2">{{ event.description }}</p>
                     
                     <div class="grid md:grid-cols-3 gap-4 mt-4">
                       <div class="flex items-center gap-2 text-gray-600">
@@ -396,15 +740,23 @@ const goToMyEvents = () => {
                   </div>
                   
                   <div class="flex gap-2 ml-4">
-                    <button class="px-4 py-2 bg-[#F4EDE4] text-[#7A1F1F] rounded-lg hover:bg-[#E6E6E6] transition-colors text-sm font-semibold">
+                    <button
+                      @click="handleEdit(event)"
+                      class="px-4 py-2 bg-[#F4EDE4] text-[#7A1F1F] rounded-lg hover:bg-[#E6E6E6] transition-colors text-sm font-semibold flex items-center gap-2"
+                    >
+                      <Edit class="w-4 h-4" />
                       Edit
                     </button>
-                    <button class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-semibold">
+                    <button
+                      @click="handleDelete(event.id)"
+                      class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-semibold flex items-center gap-2"
+                    >
+                      <Trash2 class="w-4 h-4" />
                       Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
+            </button>
+          </div>
+        </div>
+      </div>
             </div>
           </div>
         </div>
@@ -460,13 +812,13 @@ const goToMyEvents = () => {
               </div>
             </div>
           </div>
-        </div>
-      </main>
+      </div>
+    </main>
     </div>
 
-    <!-- Add Event Modal -->
+    <!-- Add/Edit Event Modal -->
     <div
-      v-if="showAddEventMenu"
+      v-if="showAddEventMenu || showEditEventMenu"
       class="fixed inset-0 z-50 overflow-y-auto"
       @click.self="closeModal"
     >
@@ -483,8 +835,8 @@ const goToMyEvents = () => {
                 <Plus class="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 class="text-2xl font-bold text-white">Add New Event</h2>
-                <p class="text-white/90 text-sm">Create a new event for your location</p>
+                <h2 class="text-2xl font-bold text-white">{{ editingEventId ? 'Edit Event' : 'Add New Event' }}</h2>
+                <p class="text-white/90 text-sm">{{ editingEventId ? 'Update event details' : 'Create a new event for your location' }}</p>
               </div>
             </div>
             <button
@@ -570,46 +922,41 @@ const goToMyEvents = () => {
               </div>
             </div>
 
-            <!-- Event Type (typeEvenement) and City (villeId) Row -->
-            <div class="grid md:grid-cols-2 gap-4">
-              <!-- Event Type (typeEvenement) -->
-              <div>
-                <label for="typeEvenement" class="block text-sm font-semibold text-gray-700 mb-2">
-                  Event Type <span class="text-red-500">*</span>
-                </label>
-                <select
-                  id="typeEvenement"
-                  v-model="eventForm.typeEvenement"
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7A1F1F] focus:border-transparent outline-none transition-all bg-white"
-                  :class="{ 'border-red-500': formErrors.typeEvenement }"
-                >
-                  <option value="">Select event type</option>
-                  <option v-for="type in eventTypes" :key="type" :value="type">{{ type }}</option>
-                </select>
-                <p v-if="formErrors.typeEvenement" class="mt-1 text-sm text-red-500">{{ formErrors.typeEvenement }}</p>
-              </div>
+            <!-- Event Type (typeEvenement) -->
+            <div>
+              <label for="typeEvenement" class="block text-sm font-semibold text-gray-700 mb-2">
+                Event Type <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="typeEvenement"
+                v-model="eventForm.typeEvenement"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7A1F1F] focus:border-transparent outline-none transition-all bg-white"
+                :class="{ 'border-red-500': formErrors.typeEvenement }"
+              >
+                <option value="">Select event type</option>
+                <option v-for="type in eventTypes" :key="type" :value="type">{{ type }}</option>
+              </select>
+              <p v-if="formErrors.typeEvenement" class="mt-1 text-sm text-red-500">{{ formErrors.typeEvenement }}</p>
+            </div>
 
-              <!-- City (villeId) -->
-              <div>
-                <label for="villeId" class="block text-sm font-semibold text-gray-700 mb-2">
-                  City <span class="text-red-500">*</span>
-                </label>
-                <div class="relative">
-                  <Building2 class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <select
-                    id="villeId"
-                    v-model="eventForm.villeId"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7A1F1F] focus:border-transparent outline-none transition-all bg-white"
-                    :class="{ 'border-red-500': formErrors.villeId }"
-                  >
-                    <option :value="null">Select city</option>
-                    <option v-for="city in cityStore.cities" :key="city.id" :value="city.id">
-                      {{ city.name }}
-                    </option>
-                  </select>
+            <!-- Detected City Display (Read-only) -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                City <span class="text-gray-400 text-xs">(Auto-detected)</span>
+              </label>
+              <div class="relative">
+                <Building2 class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                  <span v-if="detectingLocation">Detecting location...</span>
+                  <span v-else-if="detectedCity">{{ detectedCity.name }}, {{ detectedCity.region }}</span>
+                  <span v-else-if="cityStore.currentCity">{{ cityStore.currentCity.name }}, {{ cityStore.currentCity.region }}</span>
+                  <span v-else-if="locationError" class="text-red-500">{{ locationError }}</span>
+                  <span v-else class="text-yellow-600">Location not detected. Please allow location access.</span>
                 </div>
-                <p v-if="formErrors.villeId" class="mt-1 text-sm text-red-500">{{ formErrors.villeId }}</p>
               </div>
+              <p class="mt-1 text-xs text-gray-500">
+                Events will be automatically added to your detected city location.
+              </p>
             </div>
 
             <!-- Form Actions -->
@@ -625,7 +972,7 @@ const goToMyEvents = () => {
                 type="submit"
                 class="flex-1 px-6 py-3 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#7A1F1F]/90 transition-colors font-semibold"
               >
-                Create Event
+                {{ editingEventId ? 'Update Event' : 'Create Event' }}
               </button>
             </div>
           </form>

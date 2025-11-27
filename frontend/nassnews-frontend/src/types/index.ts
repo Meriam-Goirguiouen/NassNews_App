@@ -1,10 +1,11 @@
 // Data Models matching Spring Boot Entities
 
 export interface City {
-  id: number;
+  id: string; // MongoDB ObjectId string
   name: string;
   region: string;
   population?: number;
+  coords?: string; // Coordinates from backend
 }
 
 export interface User {
@@ -13,7 +14,7 @@ export interface User {
   email: string;
   role: 'CITIZEN' | 'ADMIN_COMMUNAL' | 'ADMIN_SYSTEM';
   favoriteCities?: City[];
-  cityId?: number;
+  cityId?: string | number; // Can be string (MongoDB ID) or number (for backward compatibility)
 }
 
 export interface News {
@@ -29,15 +30,16 @@ export interface News {
 }
 
 export interface Event {
-  id: number;
+  id: string; // MongoDB ObjectId string
   title: string;
   date: string;
   location: string;
-  cityId: number;
+  cityId: string; // MongoDB ObjectId string
   type: string;
   description?: string;
   imageUrl?: string;
   time?: string;
+  status?: 'Upcoming' | 'Completed';
 }
 
 export type UserRole = 'CITIZEN' | 'ADMIN_COMMUNAL' | 'ADMIN_SYSTEM';
