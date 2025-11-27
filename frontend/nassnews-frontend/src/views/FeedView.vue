@@ -41,15 +41,18 @@ const detectUserLocation = async () => {
         const city = await cityStore.detectCityFromLocation(latitude, longitude);
         
         if (city && city.id) {
+          console.log('Detected city:', city.name, 'ID:', city.id);
           selectedCityId.value = city.id;
           cityStore.setCurrentCity(city.id);
           locationError.value = null;
           
           // Fetch news and events for detected city
+          console.log('Fetching news and events for city:', city.id);
           await Promise.all([
             newsStore.fetchByCityId(city.id),
             eventStore.fetchByCityId(city.id)
           ]);
+          console.log('News fetched. Total news:', newsStore.newsList.length);
         } else {
           locationError.value = 'Could not detect your city from location.';
           // Fallback to saved city or first city
@@ -121,8 +124,21 @@ watch(() => selectedCityId.value, async (newCityId) => {
   }
 });
 
-// Computed properties
-const todaysNews = computed(() => newsStore.getTodaysNews());
+// Computed properties - show all news for the current city, not just today's
+const todaysNews = computed(() => {
+  // Show all news for the current city, sorted by date (newest first)
+  const allNews = newsStore.newsList;
+  if (!selectedCityId.value) return allNews;
+  
+  // Filter by city ID and sort by date
+  return allNews
+    .filter(news => String(news.cityId) === String(selectedCityId.value))
+    .sort((a, b) => {
+      const dateA = new Date(a.datePublication).getTime();
+      const dateB = new Date(b.datePublication).getTime();
+      return dateB - dateA; // Newest first
+    });
+});
 const currentCity = computed(() => cityStore.currentCity);
 
 // Filter cities by search query
@@ -317,9 +333,9 @@ const handleLogout = () => {
           </div>
         </div>
 
-        <!-- Today's News Section -->
+        <!-- News Section -->
         <section class="mb-8">
-          <h2 class="text-3xl font-bold text-gray-900 mb-6">Today's News</h2>
+          <h2 class="text-3xl font-bold text-gray-900 mb-6">Local News</h2>
           
           <div v-if="newsStore.loading" class="text-center py-12">
             <p class="text-gray-500">Loading news...</p>
@@ -339,7 +355,8 @@ const handleLogout = () => {
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">
-            <p class="text-gray-500">No news today for {{ currentCity?.name }}</p>
+            <p class="text-gray-500">No news available for {{ currentCity?.name }}</p>
+            <p class="text-sm text-gray-400 mt-2">Check back later for updates</p>
           </div>
         </section>
 

@@ -35,6 +35,7 @@ export const useNewsStore = defineStore('news', () => {
     loading.value = true;
     error.value = null;
     try {
+      console.log('Fetching news for city ID:', cityId);
       const response = await fetch(`http://localhost:8080/api/actualites?villeId=${cityId}`, {
         method: 'GET',
         headers: {
@@ -43,12 +44,18 @@ export const useNewsStore = defineStore('news', () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch news');
+        const errorText = await response.text();
+        console.error('Failed to fetch news. Status:', response.status, 'Error:', errorText);
+        throw new Error(`Failed to fetch news: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('Received news data:', data);
+      console.log('Number of news items:', data.length);
+      
       // Map backend Actualite to frontend News
       newsList.value = data.map(mapActualiteToNews);
+      console.log('Mapped news list:', newsList.value);
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch news';
       console.error('Error fetching news:', err);
