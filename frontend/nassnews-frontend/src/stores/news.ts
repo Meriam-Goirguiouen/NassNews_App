@@ -7,11 +7,11 @@ export const useNewsStore = defineStore('news', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  async function fetchByCityId(cityId: number) {
+  async function fetchByCityId(cityId: string) {
     loading.value = true;
     error.value = null;
     try {
-      const response = await fetch(`http://localhost:8080/api/actualites?villeId=${cityId.toString()}`, {
+      const response = await fetch(`http://localhost:8080/api/actualites?villeId=${cityId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
