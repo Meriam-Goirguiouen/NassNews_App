@@ -38,4 +38,27 @@ const router = createRouter({
   routes,
 });
 
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+
+  // Routes protégées
+  const protectedRoutes = ['/feed', '/admin/communal', '/admin/system'];
+
+  if (protectedRoutes.includes(to.path) && !token) {
+    return next('/login');
+  }
+
+  // Restrictions selon rôles
+  if (to.path === '/admin/communal' && role !== 'ADMIN_COMMUNAL') {
+    return next('/login');
+  }
+
+  if (to.path === '/admin/system' && role !== 'ADMIN_SYSTEME') {
+    return next('/login');
+  }
+
+  next();
+});
+
 export default router;

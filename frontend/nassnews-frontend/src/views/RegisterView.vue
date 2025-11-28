@@ -19,28 +19,29 @@ const handleRegister = async () => {
 
   // Validation
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = 'Les mots de passe ne correspondent pas';
+    errorMessage.value = 'Passwords do not match';
     return;
   }
 
   if (password.value.length < 6) {
-    errorMessage.value = 'Le mot de passe doit contenir au moins 6 caractères';
+    errorMessage.value = 'Password must be at least 6 characters long';
     return;
   }
 
   try {
     // Only citizens can register through this form
     await authStore.register({
-      username: username.value,
-      email: email.value,
-      password: password.value,
-      role: 'CITIZEN',
+    username: username.value,
+    email: email.value,
+    password: password.value,
+    confirmPassword: confirmPassword.value,
+    role: 'USER',
     });
 
     // Registration successful, redirect to login
     router.push('/login');
   } catch (err) {
-    errorMessage.value = authStore.error || 'Échec de l\'inscription';
+    errorMessage.value = authStore.error || 'Registration failed';
   }
 };
 </script>
@@ -53,12 +54,12 @@ const handleRegister = async () => {
         <router-link to="/" class="inline-block mb-4">
           <img :src="logoWide" alt="NassNews Logo" class="h-16 w-auto mx-auto" />
         </router-link>
-        <p class="text-gray-600 mt-2">Créez votre compte</p>
+        <p class="text-gray-600 mt-2">Create your account</p>
       </div>
 
       <!-- Register Card -->
       <div class="bg-white rounded-3xl shadow-xl p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Inscription</h2>
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign Up</h2>
 
         <!-- Error Message -->
         <div v-if="errorMessage" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
@@ -70,7 +71,7 @@ const handleRegister = async () => {
           <!-- Username -->
           <div>
             <label for="username" class="block text-sm font-semibold text-gray-700 mb-2">
-              Nom d'utilisateur
+              Username
             </label>
             <input
               id="username"
@@ -78,7 +79,7 @@ const handleRegister = async () => {
               type="text"
               required
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none transition-colors"
-              placeholder="Votre nom"
+              placeholder="Your name"
             />
           </div>
 
@@ -93,14 +94,14 @@ const handleRegister = async () => {
               type="email"
               required
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none transition-colors"
-              placeholder="votre@email.com"
+              placeholder="your@email.com"
             />
           </div>
 
           <!-- Password -->
           <div>
             <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
-              Mot de passe
+              Password
             </label>
             <input
               id="password"
@@ -115,7 +116,7 @@ const handleRegister = async () => {
           <!-- Confirm Password -->
           <div>
             <label for="confirmPassword" class="block text-sm font-semibold text-gray-700 mb-2">
-              Confirmer le mot de passe
+              Confirm Password
             </label>
             <input
               id="confirmPassword"
@@ -136,8 +137,8 @@ const handleRegister = async () => {
             :full-width="true"
             :disabled="authStore.loading"
           >
-            <span v-if="authStore.loading">Inscription en cours...</span>
-            <span v-else>S'inscrire</span>
+            <span v-if="authStore.loading">Registering...</span>
+            <span v-else>Sign Up</span>
           </AppButton>
         </form>
 
@@ -147,16 +148,16 @@ const handleRegister = async () => {
             <div class="w-full border-t border-gray-200"></div>
           </div>
           <div class="relative flex justify-center text-sm">
-            <span class="px-4 bg-white text-gray-500">OU</span>
+            <span class="px-4 bg-white text-gray-500">OR</span>
           </div>
         </div>
 
         <!-- Login Link -->
         <div class="text-center">
           <p class="text-gray-600 text-sm">
-            Vous avez déjà un compte?
+            Already have an account?
             <router-link to="/login" class="text-[#7A1F1F] font-semibold hover:underline">
-              Connectez-vous
+              Log in
             </router-link>
           </p>
         </div>
@@ -165,10 +166,9 @@ const handleRegister = async () => {
       <!-- Back to Home -->
       <div class="text-center mt-6">
         <router-link to="/" class="text-gray-600 text-sm hover:text-[#7A1F1F] transition-colors">
-          ← Retour à l'accueil
+          ← Back to home
         </router-link>
       </div>
     </div>
   </div>
 </template>
-
