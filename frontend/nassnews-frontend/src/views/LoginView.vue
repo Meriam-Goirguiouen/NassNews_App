@@ -19,7 +19,12 @@ const handleLogin = async () => {
 
   if (success && authStore.currentUser) {
     // Redirect based on role
-    console.log('Login successful, user role:', authStore.currentUser.role);
+    //console.log('Login successful, user role:', authStore.currentUser.role);
+     // Affichage pour vérification
+    console.log('Login successful !');
+    console.log('user role:', authStore.currentUser.role);
+    console.log('Token:', authStore.token); // Affiche le token
+    console.log('Email:', authStore.currentUser.email); // Affiche l'email
     
     if (authStore.isCitizen) {
       router.push('/feed');
@@ -46,12 +51,12 @@ const handleLogin = async () => {
         <router-link to="/" class="inline-block mb-4">
           <img :src="logoWide" alt="NassNews Logo" class="h-16 w-auto mx-auto" />
         </router-link>
-        <p class="text-gray-600 mt-2">Connectez-vous à votre compte</p>
+        <p class="text-gray-600 mt-2">Sign in to your account</p>
       </div>
 
       <!-- Login Card -->
       <div class="bg-white rounded-3xl shadow-xl p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Connexion</h2>
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
 
         <!-- Error Message -->
         <div v-if="authStore.error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
@@ -71,14 +76,14 @@ const handleLogin = async () => {
               type="email"
               required
               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none transition-colors"
-              placeholder="votre@email.com"
+              placeholder="your@email.com"
             />
           </div>
 
           <!-- Password -->
           <div>
             <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
-              Mot de passe
+              Password
             </label>
             <input
               id="password"
@@ -93,7 +98,7 @@ const handleLogin = async () => {
           <!-- Forgot Password Link -->
           <div class="text-right">
             <a href="#" class="text-sm text-[#7A1F1F] hover:underline">
-              Mot de passe oublié?
+              Forgot password?
             </a>
           </div>
 
@@ -105,8 +110,8 @@ const handleLogin = async () => {
             :full-width="true"
             :disabled="authStore.loading"
           >
-            <span v-if="authStore.loading">Connexion en cours...</span>
-            <span v-else>Se connecter</span>
+            <span v-if="authStore.loading">Logging in...</span>
+            <span v-else>Log In</span>
           </AppButton>
         </form>
 
@@ -116,16 +121,16 @@ const handleLogin = async () => {
             <div class="w-full border-t border-gray-200"></div>
           </div>
           <div class="relative flex justify-center text-sm">
-            <span class="px-4 bg-white text-gray-500">OU</span>
+            <span class="px-4 bg-white text-gray-500">OR</span>
           </div>
         </div>
 
         <!-- Register Link -->
         <div class="text-center">
           <p class="text-gray-600 text-sm">
-            Vous n'avez pas de compte?
+            Don't have an account?
             <router-link to="/register" class="text-[#7A1F1F] font-semibold hover:underline">
-              Inscrivez-vous
+              Sign up
             </router-link>
           </p>
         </div>
@@ -134,10 +139,9 @@ const handleLogin = async () => {
       <!-- Back to Home -->
       <div class="text-center mt-6">
         <router-link to="/" class="text-gray-600 text-sm hover:text-[#7A1F1F] transition-colors">
-          ← Retour à l'accueil
+          ← Back to home
         </router-link>
       </div>
     </div>
   </div>
 </template>
-

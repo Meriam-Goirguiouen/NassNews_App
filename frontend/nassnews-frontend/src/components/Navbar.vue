@@ -61,8 +61,8 @@ const navLinks = [
   { name: 'Home', href: '#home' },
   { name: 'About Us', href: '#about' },
   { name: 'Contact', href: '#contact' },
-  { name: 'Sign Up', href: '#signup' },
-  { name: 'Sign In', href: '#signin' }
+  { name: 'Sign Up', href: '/register' },
+  { name: 'Sign In', href: '/login' }
 ]
 
 const handleScroll = () => {

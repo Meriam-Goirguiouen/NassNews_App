@@ -4,12 +4,14 @@ import java.util.List;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document(collection = "utilisateurs")
 public class Utilisateur {
 
     @Id
-    private Integer idUtilisateur;
+    @Field("_id")
+    private String idUtilisateur;
 
     private String nom;
 
@@ -17,16 +19,24 @@ public class Utilisateur {
 
     private String motDePasse;
 
-    private String role; // UTILISATEUR, ADMIN_COMMUNAL, ADMIN_SYSTEME
+    private Role role; // UTILISATEUR, ADMIN_COMMUNAL, ADMIN_SYSTEME
 
-    private List<Integer> villesFavorites; // Liste d’ID de villes favorites
+    private List<String> villesFavorites; // Liste d’ID de villes favorites
+
+    public Utilisateur (){}
+
+    public Utilisateur (String nom, String email, String motDePasse){
+        this.nom = nom;
+        this.email = email;
+        this.motDePasse = motDePasse;
+    }
 
     // --- Getters et Setters ---
-    public Integer getIdUtilisateur() {
+    public String getIdUtilisateur() {
         return idUtilisateur;
     }
 
-    public void setIdUtilisateur(Integer idUtilisateur) {
+    public void setIdUtilisateur(String idUtilisateur) {
         this.idUtilisateur = idUtilisateur;
     }
 
@@ -54,19 +64,19 @@ public class Utilisateur {
         this.motDePasse = motDePasse;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 
-    public List<Integer> getVillesFavorites() {
+    public List<String> getVillesFavorites() {
         return villesFavorites;
     }
 
-    public void setVillesFavorites(List<Integer> villesFavorites) {
+    public void setVillesFavorites(List<String> villesFavorites) {
         this.villesFavorites = villesFavorites;
     }
 }

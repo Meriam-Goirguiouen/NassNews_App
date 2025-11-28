@@ -1,5 +1,6 @@
 package ma.nassnewsapp.backend.services;
 
+import ma.nassnewsapp.backend.entities.Role;
 import ma.nassnewsapp.backend.entities.Utilisateur;
 import ma.nassnewsapp.backend.repositories.UtilisateurRepository;
 import org.slf4j.Logger;
@@ -14,115 +15,130 @@ import java.util.Optional;
 public class UtilisateurService {
 
     private static final Logger logger = LoggerFactory.getLogger(UtilisateurService.class);
-    
+
     private final UtilisateurRepository utilisateurRepository;
     private final VilleService villeService;
 
-    // L'injection par constructeur est une bonne pratique.
-    // Spring s'occupe de fournir une instance de UtilisateurRepository.
     @Autowired
     public UtilisateurService(UtilisateurRepository utilisateurRepository, VilleService villeService) {
         this.utilisateurRepository = utilisateurRepository;
         this.villeService = villeService;
-        logger.info("UtilisateurService initialized with VilleService dependency");
+        logger.info("UtilisateurService initialized");
     }
 
-    /**
-     * Récupère tous les utilisateurs.
-     * @return une liste de tous les utilisateurs.
-     */
+    // ----------------------------------------------------------------------
+    // GET ALL
+    // ----------------------------------------------------------------------
     public List<Utilisateur> getAllUtilisateurs() {
         return utilisateurRepository.findAll();
     }
 
-    /**
-     * Récupère un utilisateur par son identifiant unique.
-     * @param id L'identifiant de l'utilisateur.
-     * @return un Optional contenant l'utilisateur s'il est trouvé, sinon un Optional vide.
-     */
-    public Optional<Utilisateur> getUtilisateurById(Integer id) {
+    // ----------------------------------------------------------------------
+    // GET BY ID
+    // ----------------------------------------------------------------------
+    public Optional<Utilisateur> getUtilisateurById(String id) {
         return utilisateurRepository.findById(id);
     }
 
-    /**
-     * Récupère un utilisateur par son adresse e-mail.
-     * @param email L'e-mail de l'utilisateur.
-     * @return un Optional contenant l'utilisateur s'il est trouvé.
-     */
+    // ----------------------------------------------------------------------
+    // GET BY EMAIL
+    // ----------------------------------------------------------------------
     public Optional<Utilisateur> getUtilisateurByEmail(String email) {
         return utilisateurRepository.findByEmail(email);
     }
 
-    /**
-     * Crée et sauvegarde un nouvel utilisateur.
-     * NOTE: Dans une application réelle, il faudrait hasher le mot de passe ici !
-     * @param utilisateur L'objet utilisateur à créer.
-     * @return L'utilisateur sauvegardé.
-     */
+    // ----------------------------------------------------------------------
+    // CREATE USER (WITHOUT SECURITY)
+    // ----------------------------------------------------------------------
     public Utilisateur createUtilisateur(Utilisateur utilisateur) {
-        // Validate favorite villes exist
+
+        // Validation villes favorites
         if (utilisateur.getVillesFavorites() != null && !utilisateur.getVillesFavorites().isEmpty()) {
-            logger.debug("UtilisateurService: Validating {} favorite villes via VilleService", utilisateur.getVillesFavorites().size());
-            for (Integer villeIdInt : utilisateur.getVillesFavorites()) {
-                logger.debug("UtilisateurService: Validating ville ID {} via VilleService", villeIdInt);
+            for (String villeIdInt : utilisateur.getVillesFavorites()) {
                 villeService.getVilleById(String.valueOf(villeIdInt))
-                    .orElseThrow(() -> {
-                        logger.warn("UtilisateurService: Ville with ID {} not found via VilleService", villeIdInt);
-                        return new IllegalArgumentException("Ville with ID " + villeIdInt + " not found");
-                    });
+                    .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + villeIdInt + " not found"));
             }
-            logger.debug("UtilisateurService: All favorite villes validated successfully via VilleService");
         }
-        // Logique de validation ou de traitement avant sauvegarde (ex: hasher le mot de passe)
+
+        // Pas de hash ici — simple sauvegarde
         return utilisateurRepository.save(utilisateur);
     }
 
-    /**
-     * Met à jour les informations d'un utilisateur existant.
-     * @param id L'identifiant de l'utilisateur à mettre à jour.
-     * @param utilisateurDetails L'objet contenant les nouvelles informations.
-     * @return un Optional contenant l'utilisateur mis à jour s'il existait.
-     */
-    public Optional<Utilisateur> updateUtilisateur(Integer id, Utilisateur utilisateurDetails) {
-        // Validate favorite villes exist if they are being updated
+    // ----------------------------------------------------------------------
+    // UPDATE USER
+    // ----------------------------------------------------------------------
+    public Optional<Utilisateur> updateUtilisateur(String id, Utilisateur utilisateurDetails) {
+
         if (utilisateurDetails.getVillesFavorites() != null && !utilisateurDetails.getVillesFavorites().isEmpty()) {
-            logger.debug("UtilisateurService: Validating {} favorite villes via VilleService for update", utilisateurDetails.getVillesFavorites().size());
-            for (Integer villeIdInt : utilisateurDetails.getVillesFavorites()) {
-                logger.debug("UtilisateurService: Validating ville ID {} via VilleService for update", villeIdInt);
+            for (String villeIdInt : utilisateurDetails.getVillesFavorites()) {
                 villeService.getVilleById(String.valueOf(villeIdInt))
-                    .orElseThrow(() -> {
-                        logger.warn("UtilisateurService: Ville with ID {} not found via VilleService during update", villeIdInt);
-                        return new IllegalArgumentException("Ville with ID " + villeIdInt + " not found");
-                    });
+                    .orElseThrow(() -> new IllegalArgumentException("Ville with ID " + villeIdInt + " not found"));
             }
-            logger.debug("UtilisateurService: All favorite villes validated successfully via VilleService for update");
         }
-        
-        return utilisateurRepository.findById(id)
-                .map(existingUser -> {
-                    existingUser.setNom(utilisateurDetails.getNom());
-                    existingUser.setEmail(utilisateurDetails.getEmail());
-                    existingUser.setRole(utilisateurDetails.getRole());
-                    // On ne met généralement pas à jour le mot de passe de cette manière.
-                    // Il faudrait une méthode dédiée comme "changePassword".
-                    if (utilisateurDetails.getMotDePasse() != null && !utilisateurDetails.getMotDePasse().isEmpty()) {
-                         existingUser.setMotDePasse(utilisateurDetails.getMotDePasse()); 
-                    }
-                    existingUser.setVillesFavorites(utilisateurDetails.getVillesFavorites());
-                    return utilisateurRepository.save(existingUser);
-                });
+
+        return utilisateurRepository.findById(id).map(existingUser -> {
+            existingUser.setNom(utilisateurDetails.getNom());
+            existingUser.setEmail(utilisateurDetails.getEmail());
+            existingUser.setRole(utilisateurDetails.getRole());
+
+            if (utilisateurDetails.getMotDePasse() != null && !utilisateurDetails.getMotDePasse().isEmpty()) {
+                existingUser.setMotDePasse(utilisateurDetails.getMotDePasse());
+            }
+
+            existingUser.setVillesFavorites(utilisateurDetails.getVillesFavorites());
+
+            return utilisateurRepository.save(existingUser);
+        });
     }
 
-    /**
-     * Supprime un utilisateur par son identifiant.
-     * @param id L'identifiant de l'utilisateur à supprimer.
-     * @return true si la suppression a réussi, false si l'utilisateur n'existait pas.
-     */
-    public boolean deleteUtilisateur(Integer id) {
+    // ----------------------------------------------------------------------
+    // DELETE USER
+    // ----------------------------------------------------------------------
+    public boolean deleteUtilisateur(String id) {
         if (utilisateurRepository.existsById(id)) {
             utilisateurRepository.deleteById(id);
             return true;
         }
         return false;
+    }
+
+    // ----------------------------------------------------------------------
+    // REGISTER (NO SECURITY)
+    // ----------------------------------------------------------------------
+    public Utilisateur registerUser(String nom, String email, String password, String confirmPassword) {
+
+        if (!password.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Passwords don't match!");
+        }
+
+        if (utilisateurRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists!");
+        }
+
+        String storedPassword = password;
+
+        Utilisateur user = new Utilisateur(nom, email, storedPassword);
+        user.setRole(Role.USER);
+
+        return utilisateurRepository.save(user);
+    }
+    // ----------------------------------------------------------------------
+    // LOGIN (NO SECURITY)
+    // ----------------------------------------------------------------------
+    public Utilisateur authenticateUser(String email, String password) {
+
+        Optional<Utilisateur> optionalUser = utilisateurRepository.findByEmail(email);
+
+        if (optionalUser.isEmpty()) {
+            throw new IllegalArgumentException("User not found!");
+        }
+
+        Utilisateur user = optionalUser.get();
+
+        if (!password.equals(user.getMotDePasse())) {
+            throw new IllegalArgumentException("Password incorrect!");
+        }
+
+        return user;
     }
 }
