@@ -20,10 +20,10 @@ public class EvenementController {
 
     @GetMapping
     public ResponseEntity<List<Evenement>> getEvents(
-            @RequestParam(required = false) Integer villeId,
+            @RequestParam(required = false) String villeId,
             @RequestParam(required = false) String categorie) {
 
-        if (villeId != null) {
+        if (villeId != null && !villeId.isEmpty()) {
             return ResponseEntity.ok(evenementService.getEvenementsByVille(villeId));
         }
         if (categorie != null) {
@@ -33,7 +33,7 @@ public class EvenementController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Evenement> getEventById(@PathVariable Integer id) {
+    public ResponseEntity<Evenement> getEventById(@PathVariable String id) {
         return evenementService.getEvenementById(id)
                 .map(ResponseEntity::ok) // If event exists, return 200 OK with the event
                 .orElse(ResponseEntity.notFound().build()); // Otherwise, return 404 Not Found
@@ -46,14 +46,14 @@ public class EvenementController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Evenement> updateEvent(@PathVariable Integer id, @RequestBody Evenement evenementDetails) {
+    public ResponseEntity<Evenement> updateEvent(@PathVariable String id, @RequestBody Evenement evenementDetails) {
         return evenementService.updateEvenement(id, evenementDetails)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteEvent(@PathVariable String id) {
         if (evenementService.deleteEvenement(id)) {
             return ResponseEntity.noContent().build(); // Return 204 No Content on success
         }

@@ -4,7 +4,8 @@ import type { City } from '../types';
 
 export const useCityStore = defineStore('city', () => {
   const cities = ref<City[]>([]);
-  const currentCityId = ref<number | null>(null);
+  // Initialize as null, allows string (MongoDB ID) or null
+  const currentCityId = ref<string | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -24,39 +25,115 @@ export const useCityStore = defineStore('city', () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch cities');
+        throw new Error(`Error: ${response.statusText}`);
       }
 
-      cities.value = await response.json();
+      const rawData = await response.json();
+
+      // CLEAN MAPPING: Map MongoDB fields to Frontend fields
+      // Ensure 'id' is defined only ONCE here.
+      cities.value = rawData.map((ville: any) => ({
+        id: ville._id,            // Map MongoDB '_id' to frontend 'id'
+        name: ville.nom,          // Map 'nom' to 'name'
+        region: ville.region || '',
+        population: ville.population || 0,
+        coords: ville.coordonnees || ''
+      }));
       
-      // Set first city as default if none selected
-      if (!currentCityId.value && cities.value.length > 0) {
-        currentCityId.value = cities.value[0].id;
-      }
     } catch (err: any) {
-      error.value = err.message || 'Failed to fetch cities';
       console.error('Error fetching cities:', err);
-      // Keep empty array on error
+      error.value = err.message || 'Failed to fetch cities';
       cities.value = [];
     } finally {
       loading.value = false;
     }
   }
 
-  function setCurrentCity(cityId: number) {
+  function setCurrentCity(cityId: string) {
     currentCityId.value = cityId;
-    localStorage.setItem('currentCityId', cityId.toString());
-  }
-
-  function getCityById(id: number): City | undefined {
-    return cities.value.find((city) => city.id === id);
+    localStorage.setItem('currentCityId', cityId);
   }
 
   function loadSavedCity() {
     const saved = localStorage.getItem('currentCityId');
-    if (saved) {
-      currentCityId.value = parseInt(saved);
+    if (saved && cities.value.some(c => c.id === saved)) {
+      currentCityId.value = saved;
+    }
+  }
+
+  async function detectCityFromLocation(latitude: number, longitude: number): Promise<City | null> {
+    loading.value = true;
+    error.value = null;
+    try {
+      console.log('Detecting city from coordinates:', { latitude, longitude });
+      
+      const response = await fetch('http://localhost:8080/api/cities/detect-city', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude
+        }),
+      });
+
+      console.log('Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Backend error response:', errorText);
+        throw new Error(`Backend error (${response.status}): ${errorText || response.statusText}`);
+      }
+
+      const ville = await response.json();
+      console.log('Backend returned ville:', ville);
+      
+      // Validate that we got the expected data
+      // Backend may return 'id' or '_id', and 'nom' for city name
+      const villeId = ville?._id || ville?.id;
+      const villeNom = ville?.nom || ville?.name;
+      
+      if (!ville || !villeId || !villeNom) {
+        console.error('Invalid response from backend - empty or incomplete ville:', ville);
+        // Check if it's an empty Ville object (has _class but no id)
+        if (ville && ville._class && !villeId) {
+          throw new Error('Could not detect city from coordinates. The location service may be unavailable or the coordinates may not correspond to a known city.');
+        }
+        throw new Error('Invalid response from server: city data is incomplete');
+      }
+      
+      // Map backend Ville to frontend City
+      const detectedCity: City = {
+        id: villeId,
+        name: villeNom,
+        region: ville.region || '',
+        population: ville.population || 0,
+        coords: ville.coordonnees || ''
+      };
+
+      console.log('Mapped to City:', detectedCity);
+
+      // Check if this city is already in our list, if not add it
+      const existingCity = cities.value.find(c => c.id === detectedCity.id);
+      if (!existingCity) {
+        cities.value.push(detectedCity);
+        console.log('Added new city to list');
+      } else {
+        console.log('City already in list');
+      }
+
+      // Set as current city
+      setCurrentCity(detectedCity.id);
+      console.log('Set current city ID:', detectedCity.id);
+      
+      return detectedCity;
+    } catch (err: any) {
+      console.error('Error detecting city:', err);
+      error.value = err.message || 'Failed to detect city';
+      return null;
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -68,8 +145,7 @@ export const useCityStore = defineStore('city', () => {
     error,
     fetchCities,
     setCurrentCity,
-    getCityById,
     loadSavedCity,
+    detectCityFromLocation,
   };
 });
-

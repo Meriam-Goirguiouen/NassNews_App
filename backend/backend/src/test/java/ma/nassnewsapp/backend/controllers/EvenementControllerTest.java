@@ -38,52 +38,52 @@ class EvenementControllerTest {
     @MockBean // Creates a mock of VilleService and adds it to the application context
     private VilleService villeService;
 
-    // @Test
-    // void shouldFetchEventsByVilleId() throws Exception {
-    //     // Given
-    //     Evenement event1 = new Evenement(1, "Event A", "...", "Agadir", LocalDate.now(), "Concert", 1);
-    //     given(evenementService.getEvenementsByVille(1)).willReturn(List.of(event1));
+    @Test
+    void shouldFetchEventsByVilleId() throws Exception {
+        // Given
+        Evenement event1 = new Evenement("event1", "Event A", "...", "Agadir", LocalDate.now(), "Concert", "ville1");
+        given(evenementService.getEvenementsByVille("ville1")).willReturn(List.of(event1));
 
-    //     // When & Then
-    //     mockMvc.perform(get("/api/events").param("villeId", "1"))
-    //             .andExpect(status().isOk())
-    //             .andExpect(jsonPath("$[0].titre", is("Event A")));
-    // }
+        // When & Then
+        mockMvc.perform(get("/api/events").param("villeId", "ville1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].titre", is("Event A")));
+    }
 
-    // @Test
-    // void shouldFetchEventByIdWhenEventExists() throws Exception {
-    //     // Given
-    //     Evenement event1 = new Evenement(1, "Event A", "...", "Agadir", LocalDate.now(), "Concert", 1);
-    //     given(evenementService.getEvenementById(1)).willReturn(Optional.of(event1));
+    @Test
+    void shouldFetchEventByIdWhenEventExists() throws Exception {
+        // Given
+        Evenement event1 = new Evenement("event1", "Event A", "...", "Agadir", LocalDate.now(), "Concert", "ville1");
+        given(evenementService.getEvenementById("event1")).willReturn(Optional.of(event1));
 
-    //     // When & Then
-    //     mockMvc.perform(get("/api/events/1"))
-    //             .andExpect(status().isOk())
-    //             .andExpect(jsonPath("$.idEvenement", is(1)))
-    //             .andExpect(jsonPath("$.titre", is("Event A")));
-    // }
+        // When & Then
+        mockMvc.perform(get("/api/events/event1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idEvenement", is("event1")))
+                .andExpect(jsonPath("$.titre", is("Event A")));
+    }
 
-    // @Test
-    // void shouldReturn404WhenFetchingNonExistentEvent() throws Exception {
-    //     // Given
-    //     given(evenementService.getEvenementById(99)).willReturn(Optional.empty());
+    @Test
+    void shouldReturn404WhenFetchingNonExistentEvent() throws Exception {
+        // Given
+        given(evenementService.getEvenementById("nonexistent")).willReturn(Optional.empty());
 
-    //     // When & Then
-    //     mockMvc.perform(get("/api/events/99"))
-    //             .andExpect(status().isNotFound());
-    // }
+        // When & Then
+        mockMvc.perform(get("/api/events/nonexistent"))
+                .andExpect(status().isNotFound());
+    }
 
-    // @Test
-    // void shouldCreateNewEvent() throws Exception {
-    //     // Given
-    //     Evenement eventToCreate = new Evenement(100, "New Event", "...", "...", LocalDate.now(), "Test", 10);
-    //     given(evenementService.createEvenement(any(Evenement.class))).willReturn(eventToCreate);
+    @Test
+    void shouldCreateNewEvent() throws Exception {
+        // Given
+        Evenement eventToCreate = new Evenement("event100", "New Event", "...", "...", LocalDate.now(), "Test", "ville10");
+        given(evenementService.createEvenement(any(Evenement.class))).willReturn(eventToCreate);
 
-    //     // When & Then
-    //     mockMvc.perform(post("/api/events")
-    //                     .contentType(MediaType.APPLICATION_JSON)
-    //                     .content(objectMapper.writeValueAsString(eventToCreate)))
-    //             .andExpect(status().isCreated())
-    //             .andExpect(jsonPath("$.titre", is("New Event")));
-    // }
+        // When & Then
+        mockMvc.perform(post("/api/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(eventToCreate)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.titre", is("New Event")));
+    }
 }

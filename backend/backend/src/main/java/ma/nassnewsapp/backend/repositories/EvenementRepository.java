@@ -9,16 +9,16 @@ import org.springframework.stereotype.Repository;
 import ma.nassnewsapp.backend.entities.Evenement;
 
 @Repository
-public interface EvenementRepository extends MongoRepository<Evenement, Integer> {
+public interface EvenementRepository extends MongoRepository<Evenement, String> {
 
 	/**
 	 * Récupère tous les événements associés à une ville spécifique.
 	 * 
-	 * @param idVille L'identifiant de la ville
+	 * @param idVille L'identifiant de la ville (MongoDB ObjectId string)
 	 * @return Liste des événements de la ville
 	 */
 	@Query("{ 'villeId' : ?0 }")
-	List<Evenement> getEvenementsByVille(Integer idVille);
+	List<Evenement> getEvenementsByVille(String idVille);
 
 	/**
 	 * Récupère tous les événements d'une catégorie spécifique.
@@ -54,7 +54,7 @@ public interface EvenementRepository extends MongoRepository<Evenement, Integer>
 	 * 
 	 * @param idEvenement L'identifiant de l'événement à supprimer
 	 */
-	default void supprimerEvenement(Integer idEvenement) {
+	default void supprimerEvenement(String idEvenement) {
 		deleteById(idEvenement);
 	}
 }

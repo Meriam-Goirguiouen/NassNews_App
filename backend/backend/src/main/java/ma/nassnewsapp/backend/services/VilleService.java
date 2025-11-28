@@ -62,32 +62,44 @@ public class VilleService {
                     + "&lon=" + longitude
                     + "&format=json&addressdetails=1";
 
-            ReverseGeoResponse response =
-                    restTemplate.getForObject(url, ReverseGeoResponse.class);
+            // Add User-Agent header (required by Nominatim)
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("User-Agent", "NassNewsApp/1.0");
+            org.springframework.http.HttpEntity<?> entity = new org.springframework.http.HttpEntity<>(headers);
+            org.springframework.http.ResponseEntity<ReverseGeoResponse> responseEntity = 
+                restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, ReverseGeoResponse.class);
+            
+            ReverseGeoResponse response = responseEntity.getBody();
 
-            if (response != null &&
-                response.getAddress() != null &&
-                response.getAddress().getCity() != null) {
+            if (response != null && response.getAddress() != null) {
+                ReverseGeoResponse.Address addr = response.getAddress();
+                // Try multiple fields - Nominatim may return city in different fields
+                String cityName = addr.getCity();
+                if (cityName == null) cityName = addr.getTown();
+                if (cityName == null) cityName = addr.getVillage();
+                if (cityName == null) cityName = addr.getMunicipality();
+                if (cityName == null) cityName = addr.getCityDistrict();
 
-                String cityName = response.getAddress().getCity();
+                if (cityName != null && !cityName.isEmpty()) {
+                    Optional<Ville> existingVille = getVilleByNom(cityName);
 
-                Optional<Ville> existingVille = getVilleByNom(cityName);
+                    if (existingVille.isPresent()) return existingVille.get();
 
-                if (existingVille.isPresent()) return existingVille.get();
+                    // Sinon, créer et sauvegarder
+                    Ville newVille = new Ville();
+                    newVille.setNom(cityName);
+                    newVille.setCoordonnees(latitude + "," + longitude);
 
-                // Sinon, créer et sauvegarder
-                Ville newVille = new Ville();
-                newVille.setNom(cityName);
-                newVille.setCoordonnees(latitude + "," + longitude);
-
-                return saveVille(newVille);
+                    return saveVille(newVille);
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
+            // Log the error but don't throw - return empty Ville to indicate failure
         }
 
-        return new Ville();
+        return new Ville(); // Empty Ville indicates detection failed
     }
 
     // --------------------------------------------------------------------
@@ -109,8 +121,25 @@ public class VilleService {
 
         static class Address {
             private String city;
+            private String town;
+            private String village;
+            private String municipality;
+            private String cityDistrict;
+            
             public String getCity() { return city; }
             public void setCity(String city) { this.city = city; }
+            
+            public String getTown() { return town; }
+            public void setTown(String town) { this.town = town; }
+            
+            public String getVillage() { return village; }
+            public void setVillage(String village) { this.village = village; }
+            
+            public String getMunicipality() { return municipality; }
+            public void setMunicipality(String municipality) { this.municipality = municipality; }
+            
+            public String getCityDistrict() { return cityDistrict; }
+            public void setCityDistrict(String cityDistrict) { this.cityDistrict = cityDistrict; }
         }
     }
 }
