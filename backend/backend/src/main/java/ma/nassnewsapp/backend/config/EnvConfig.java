@@ -18,4 +18,6 @@ public class EnvConfig {
     public static String getIpstackApiKey() {
         return dotenv.get("IPSTACK_API_KEY");
     }
+
+   
 }

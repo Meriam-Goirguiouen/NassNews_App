@@ -11,7 +11,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  role: 'CITIZEN' | 'ADMIN_COMMUNAL' | 'ADMIN_SYSTEM';
+  role: 'USER' | 'ADMIN_COMMUNAL' | 'ADMIN_SYSTEM';
   favoriteCities?: City[];
   cityId?: number;
 }
@@ -40,7 +40,7 @@ export interface Event {
   time?: string;
 }
 
-export type UserRole = 'CITIZEN' | 'ADMIN_COMMUNAL' | 'ADMIN_SYSTEM';
+export type UserRole = 'USER' | 'ADMIN_COMMUNAL' | 'ADMIN_SYSTEM';
 
 export interface LoginRequest {
   email: string;
@@ -51,6 +51,7 @@ export interface RegisterRequest {
   username: string;
   email: string;
   password: string;
+  confirmPassword: string;
   role: UserRole;
   cityId?: number;
 }
