@@ -22,6 +22,26 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/FeedView.vue'),
   },
   {
+    path: '/favorites',
+    name: 'Favorites',
+    component: () => import('../views/FavoritesView.vue'),
+  },
+  {
+    path: '/history',
+    name: 'History',
+    component: () => import('../views/HistoryView.vue'),
+  },
+  {
+    path: '/favorite-cities',
+    name: 'FavoriteCities',
+    component: () => import('../views/FavoriteCitiesView.vue'),
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/SettingsView.vue'),
+  },
+  {
     path: '/admin/communal',
     name: 'CommunalDashboard',
     component: () => import('../views/admin/CommunalDashboard.vue'),

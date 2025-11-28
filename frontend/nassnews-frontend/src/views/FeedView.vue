@@ -17,17 +17,71 @@ const newsStore = useNewsStore();
 const eventStore = useEventStore();
 
 // Sidebar state
-const activeMenuItem = ref('home');
 const searchQuery = ref('');
-const selectedCityId = ref<number | null>(null);
+const selectedCityId = ref<string | null>(null);
+const detectingLocation = ref(false);
+const locationError = ref<string | null>(null);
 
-// Fetch data on mount
-onMounted(async () => {
-  // Load cities
-  await cityStore.fetchCities();
-  cityStore.loadSavedCity();
-  
-  // Set default city
+// Function to detect user location
+const detectUserLocation = async () => {
+  if (!navigator.geolocation) {
+    locationError.value = 'Geolocation is not supported by your browser.';
+    return;
+  }
+
+  detectingLocation.value = true;
+  locationError.value = null;
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        console.log('Detected coordinates:', { latitude, longitude });
+        
+        const city = await cityStore.detectCityFromLocation(latitude, longitude);
+        
+        if (city && city.id) {
+          console.log('Detected city:', city.name, 'ID:', city.id);
+          selectedCityId.value = city.id;
+          cityStore.setCurrentCity(city.id);
+          locationError.value = null;
+          
+          // Fetch news and events for detected city
+          console.log('Fetching news and events for city:', city.id);
+          await Promise.all([
+            newsStore.fetchByCityId(city.id),
+            eventStore.fetchByCityId(city.id)
+          ]);
+          console.log('News fetched. Total news:', newsStore.newsList.length);
+        } else {
+          locationError.value = 'Could not detect your city from location.';
+          // Fallback to saved city or first city
+          setDefaultCity();
+        }
+      } catch (err: any) {
+        console.error('Error detecting city:', err);
+        locationError.value = 'Failed to detect city. Using default location.';
+        setDefaultCity();
+      } finally {
+        detectingLocation.value = false;
+      }
+    },
+    (error) => {
+      console.error('Geolocation error:', error);
+      locationError.value = 'Location access denied. Using default location.';
+      detectingLocation.value = false;
+      setDefaultCity();
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+};
+
+// Function to set default city (saved or first in list)
+const setDefaultCity = async () => {
   if (cityStore.currentCityId) {
     selectedCityId.value = cityStore.currentCityId;
   } else if (cityStore.cities.length > 0) {
@@ -42,6 +96,21 @@ onMounted(async () => {
       eventStore.fetchByCityId(selectedCityId.value)
     ]);
   }
+};
+
+// Fetch data on mount
+onMounted(async () => {
+  // Load cities
+  await cityStore.fetchCities();
+  cityStore.loadSavedCity();
+  
+  // Try to detect location first
+  await detectUserLocation();
+  
+  // If location detection failed or no city detected, use fallback
+  if (!selectedCityId.value) {
+    await setDefaultCity();
+  }
 });
 
 // Watch for city changes
@@ -55,8 +124,21 @@ watch(() => selectedCityId.value, async (newCityId) => {
   }
 });
 
-// Computed properties
-const todaysNews = computed(() => newsStore.getTodaysNews());
+// Computed properties - show all news for the current city, not just today's
+const todaysNews = computed(() => {
+  // Show all news for the current city, sorted by date (newest first)
+  const allNews = newsStore.newsList;
+  if (!selectedCityId.value) return allNews;
+  
+  // Filter by city ID and sort by date
+  return allNews
+    .filter(news => String(news.cityId) === String(selectedCityId.value))
+    .sort((a, b) => {
+      const dateA = new Date(a.datePublication).getTime();
+      const dateB = new Date(b.datePublication).getTime();
+      return dateB - dateA; // Newest first
+    });
+});
 const currentCity = computed(() => cityStore.currentCity);
 
 // Filter cities by search query
@@ -86,68 +168,68 @@ const handleLogout = () => {
 
         <nav class="space-y-2">
           <button
-            @click="activeMenuItem = 'home'"
+            @click="router.push('/feed')"
             :class="[
               'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-              activeMenuItem === 'home' 
+              router.currentRoute.value.name === 'Feed' 
                 ? 'bg-[#7A1F1F] text-white' 
                 : 'text-gray-700 hover:bg-[#F4EDE4]'
             ]"
           >
             <Home :size="20" />
-            <span class="font-medium">Accueil</span>
+            <span class="font-medium">Home</span>
           </button>
 
           <button
-            @click="activeMenuItem = 'favorites'"
+            @click="router.push('/favorites')"
             :class="[
               'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-              activeMenuItem === 'favorites' 
+              router.currentRoute.value.name === 'Favorites' 
                 ? 'bg-[#7A1F1F] text-white' 
                 : 'text-gray-700 hover:bg-[#F4EDE4]'
             ]"
           >
             <Heart :size="20" />
-            <span class="font-medium">Actualités Favoris</span>
+            <span class="font-medium">Favorite News</span>
           </button>
 
           <button
-            @click="activeMenuItem = 'history'"
+            @click="router.push('/history')"
             :class="[
               'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-              activeMenuItem === 'history' 
+              router.currentRoute.value.name === 'History' 
                 ? 'bg-[#7A1F1F] text-white' 
                 : 'text-gray-700 hover:bg-[#F4EDE4]'
             ]"
           >
             <History :size="20" />
-            <span class="font-medium">Historique</span>
+            <span class="font-medium">History</span>
           </button>
 
           <button
-            @click="activeMenuItem = 'cities'"
+            @click="router.push('/favorite-cities')"
             :class="[
               'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-              activeMenuItem === 'cities' 
+              router.currentRoute.value.name === 'FavoriteCities' 
                 ? 'bg-[#7A1F1F] text-white' 
                 : 'text-gray-700 hover:bg-[#F4EDE4]'
             ]"
           >
             <MapPin :size="20" />
-            <span class="font-medium">Villes Favorites</span>
+            <span class="font-medium">Favorite Cities</span>
           </button>
 
           <button
-            @click="activeMenuItem = 'settings'"
+            @click="router.push('/settings')"
             :class="[
               'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-              activeMenuItem === 'settings' 
+              router.currentRoute.value.name === 'Settings' 
                 ? 'bg-[#7A1F1F] text-white' 
                 : 'text-gray-700 hover:bg-[#F4EDE4]'
             ]"
           >
             <Settings :size="20" />
-            <span class="font-medium">Paramètres</span>
+            <span class="font-medium">Settings</span>
           </button>
         </nav>
       </div>
@@ -165,7 +247,7 @@ const handleLogout = () => {
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Rechercher des actualités par ville..."
+                placeholder="Search news by city..."
                 class="w-full pl-12 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none transition-colors"
               />
               <!-- City Dropdown -->
@@ -185,7 +267,7 @@ const handleLogout = () => {
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-2 text-gray-600">
                 <User :size="20" />
-                <span class="font-medium">{{ authStore.currentUser?.username || 'Utilisateur' }}</span>
+                <span class="font-medium">{{ authStore.currentUser?.username || 'User' }}</span>
               </div>
               <button
                 v-if="authStore.isAuthenticated"
@@ -193,14 +275,14 @@ const handleLogout = () => {
                 class="flex items-center gap-2 text-[#7A1F1F] hover:text-[#6A1A1A] transition-colors"
               >
                 <LogOut :size="20" />
-                <span class="font-medium">Déconnexion</span>
+                <span class="font-medium">Logout</span>
               </button>
               <router-link
                 v-else
                 to="/login"
                 class="flex items-center gap-2 text-[#7A1F1F] hover:text-[#6A1A1A] transition-colors"
               >
-                <span class="font-medium">Connexion</span>
+                <span class="font-medium">Login</span>
               </router-link>
             </div>
           </div>
@@ -210,22 +292,53 @@ const handleLogout = () => {
       <!-- Main Content -->
       <main class="p-6">
         <!-- User Location -->
-        <div v-if="currentCity" class="mb-6 bg-white rounded-3xl p-6 shadow-md">
-          <div class="flex items-center gap-3">
-            <MapPin :size="24" class="text-[#7A1F1F]" />
+        <div class="mb-6 bg-white rounded-3xl p-6 shadow-md">
+          <div v-if="detectingLocation" class="flex items-center gap-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#7A1F1F]"></div>
             <div>
-              <p class="text-sm text-gray-500">Votre localisation</p>
+              <p class="text-sm text-gray-500">Detecting your location...</p>
+              <p class="text-sm text-gray-400">Please wait</p>
+            </div>
+          </div>
+          
+          <div v-else-if="locationError" class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-1">
+              <MapPin :size="24" class="text-orange-500" />
+              <div>
+                <p class="text-sm text-orange-600">{{ locationError }}</p>
+                <p v-if="currentCity" class="text-xl font-bold text-gray-900">{{ currentCity.name }}, {{ currentCity.region }}</p>
+              </div>
+            </div>
+            <button
+              @click="detectUserLocation"
+              class="px-4 py-2 text-sm bg-[#7A1F1F] text-white rounded-lg hover:bg-[#7A1F1F]/90 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+          
+          <div v-else-if="currentCity" class="flex items-center gap-3">
+            <MapPin :size="24" class="text-[#7A1F1F]" />
+            <div class="flex-1">
+              <p class="text-sm text-gray-500">Your location</p>
               <p class="text-xl font-bold text-gray-900">{{ currentCity.name }}, {{ currentCity.region }}</p>
             </div>
+            <button
+              @click="detectUserLocation"
+              class="px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              title="Update location"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
-        <!-- Today's News Section -->
+        <!-- News Section -->
         <section class="mb-8">
-          <h2 class="text-3xl font-bold text-gray-900 mb-6">Actualités du Jour</h2>
+          <h2 class="text-3xl font-bold text-gray-900 mb-6">Local News</h2>
           
           <div v-if="newsStore.loading" class="text-center py-12">
-            <p class="text-gray-500">Chargement des actualités...</p>
+            <p class="text-gray-500">Loading news...</p>
           </div>
           
           <div v-else-if="newsStore.error" class="bg-red-50 text-red-600 p-4 rounded-xl">
@@ -233,20 +346,26 @@ const handleLogout = () => {
           </div>
           
           <div v-else-if="todaysNews.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <NewsCard v-for="news in todaysNews" :key="news.id" :news="news" />
+            <NewsCard 
+              v-for="news in todaysNews" 
+              :key="news.id" 
+              :news="news" 
+              :show-favorite-button="true"
+            />
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">
-            <p class="text-gray-500">Aucune actualité aujourd'hui pour {{ currentCity?.name }}</p>
+            <p class="text-gray-500">No news available for {{ currentCity?.name }}</p>
+            <p class="text-sm text-gray-400 mt-2">Check back later for updates</p>
           </div>
         </section>
 
         <!-- Events Section -->
         <section>
-          <h2 class="text-3xl font-bold text-gray-900 mb-6">Événements à Venir</h2>
+          <h2 class="text-3xl font-bold text-gray-900 mb-6">Upcoming Events</h2>
           
           <div v-if="eventStore.loading" class="text-center py-12">
-            <p class="text-gray-500">Chargement des événements...</p>
+            <p class="text-gray-500">Loading events...</p>
           </div>
           
           <div v-else-if="eventStore.error" class="bg-red-50 text-red-600 p-4 rounded-xl">
@@ -258,7 +377,7 @@ const handleLogout = () => {
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">
-            <p class="text-gray-500">Aucun événement à venir pour {{ currentCity?.name }}</p>
+            <p class="text-gray-500">No upcoming events for {{ currentCity?.name }}</p>
           </div>
         </section>
       </main>

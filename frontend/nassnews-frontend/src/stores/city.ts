@@ -29,16 +29,27 @@ export const useCityStore = defineStore('city', () => {
       }
 
       const rawData = await response.json();
+      console.log('Raw cities data from backend (first item):', rawData[0]);
 
       // CLEAN MAPPING: Map MongoDB fields to Frontend fields
-      // Ensure 'id' is defined only ONCE here.
-      cities.value = rawData.map((ville: any) => ({
-        id: ville._id,            // Map MongoDB '_id' to frontend 'id'
-        name: ville.nom,          // Map 'nom' to 'name'
-        region: ville.region || '',
-        population: ville.population || 0,
-        coords: ville.coordonnees || ''
-      }));
+      // Spring Boot serializes @Id as 'id' in JSON, not '_id'
+      cities.value = rawData.map((ville: any) => {
+        // Get ID - Spring Boot uses 'id', MongoDB uses '_id'
+        const villeId = ville.id || ville._id;
+        if (!villeId) {
+          console.error('City missing ID:', ville);
+        }
+        return {
+          id: villeId || '',            // Spring Boot serializes @Id as 'id'
+          name: ville.nom || '',          // Map 'nom' to 'name'
+          region: ville.region || '',
+          population: ville.population || 0,
+          coords: ville.coordonnees || ''
+        };
+      }).filter((city: City) => city.id && city.id !== ''); // Filter out cities without valid IDs
+      
+      console.log('Mapped cities count:', cities.value.length);
+      console.log('Sample mapped city:', cities.value[0]);
       
     } catch (err: any) {
       console.error('Error fetching cities:', err);
