@@ -21,6 +21,8 @@ public class Utilisateur {
 
     private Role role; // UTILISATEUR, ADMIN_COMMUNAL, ADMIN_SYSTEME
 
+    private String villeAssociee; // ID de la ville associée (pour ADMIN_COMMUNAL uniquement)
+    
     private List<String> villesFavorites; // Liste d'ID de villes favorites
     
     private List<String> actualitesFavorites; // Liste d'ID d'actualités favorites
@@ -98,6 +100,14 @@ public class Utilisateur {
 
     public void setEvenementsFavorites(List<String> evenementsFavorites) {
         this.evenementsFavorites = evenementsFavorites;
+    }
+
+    public String getVilleAssociee() {
+        return villeAssociee;
+    }
+
+    public void setVilleAssociee(String villeAssociee) {
+        this.villeAssociee = villeAssociee;
     }
 }
 

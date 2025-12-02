@@ -2,6 +2,7 @@ package ma.nassnewsapp.backend.services;
 
 import ma.nassnewsapp.backend.entities.Role;
 import ma.nassnewsapp.backend.entities.Utilisateur;
+import ma.nassnewsapp.backend.entities.Ville;
 import ma.nassnewsapp.backend.repositories.UtilisateurRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,8 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,12 +27,14 @@ public class UtilisateurService {
     private final UtilisateurRepository utilisateurRepository;
     private final VilleService villeService;
     private final MongoTemplate mongoTemplate;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
     public UtilisateurService(UtilisateurRepository utilisateurRepository, VilleService villeService, MongoTemplate mongoTemplate) {
         this.utilisateurRepository = utilisateurRepository;
         this.villeService = villeService;
         this.mongoTemplate = mongoTemplate;
+        this.passwordEncoder = new BCryptPasswordEncoder();
         logger.info("UtilisateurService initialized");
     }
 
@@ -67,7 +72,18 @@ public class UtilisateurService {
             }
         }
 
-        // Pas de hash ici — simple sauvegarde
+        // Hash the password before saving if it's provided and not already hashed
+        if (utilisateur.getMotDePasse() != null && !utilisateur.getMotDePasse().isEmpty()) {
+            String password = utilisateur.getMotDePasse();
+            // Check if password is already hashed (BCrypt hashes start with $2a$, $2b$, or $2y$)
+            if (!password.startsWith("$2a$") && !password.startsWith("$2b$") && !password.startsWith("$2y$")) {
+                // Password is plain text, hash it
+                String hashedPassword = passwordEncoder.encode(password);
+                utilisateur.setMotDePasse(hashedPassword);
+                logger.debug("Password hashed before creating user: {}", utilisateur.getEmail());
+            }
+        }
+
         return utilisateurRepository.save(utilisateur);
     }
 
@@ -101,10 +117,19 @@ public class UtilisateurService {
             update.set("role", utilisateurDetails.getRole());
         }
         if (utilisateurDetails.getMotDePasse() != null && !utilisateurDetails.getMotDePasse().isEmpty()) {
-            update.set("motDePasse", utilisateurDetails.getMotDePasse());
+            // Hash the password before updating
+            String hashedPassword = passwordEncoder.encode(utilisateurDetails.getMotDePasse());
+            update.set("motDePasse", hashedPassword);
+            logger.debug("Password hashed before update for user ID: {}", id);
         }
         if (utilisateurDetails.getVillesFavorites() != null) {
             update.set("villesFavorites", utilisateurDetails.getVillesFavorites());
+        }
+        if (utilisateurDetails.getVilleAssociee() != null) {
+            // Validate city exists if villeAssociee is being updated
+            villeService.getVilleById(utilisateurDetails.getVilleAssociee())
+                .orElseThrow(() -> new IllegalArgumentException("City with ID " + utilisateurDetails.getVilleAssociee() + " not found"));
+            update.set("villeAssociee", utilisateurDetails.getVilleAssociee());
         }
         
         // Use MongoTemplate to explicitly update the existing document
@@ -139,9 +164,11 @@ public class UtilisateurService {
             throw new IllegalArgumentException("Email already exists!");
         }
 
-        String storedPassword = password;
+        // Hash the password before storing
+        String hashedPassword = passwordEncoder.encode(password);
+        logger.debug("Password hashed successfully for user: {}", email);
 
-        Utilisateur user = new Utilisateur(nom, email, storedPassword);
+        Utilisateur user = new Utilisateur(nom, email, hashedPassword);
         user.setRole(Role.USER);
 
         return utilisateurRepository.save(user);
@@ -158,8 +185,32 @@ public class UtilisateurService {
         }
 
         Utilisateur user = optionalUser.get();
+        String storedPassword = user.getMotDePasse();
 
-        if (!password.equals(user.getMotDePasse())) {
+        // Check if password is already hashed (BCrypt hashes start with $2a$, $2b$, or $2y$)
+        // If not hashed (legacy plain text), compare directly for backward compatibility
+        // Otherwise, use BCrypt to verify
+        boolean passwordMatches;
+        if (storedPassword != null && (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$"))) {
+            // Password is hashed, use BCrypt to verify
+            passwordMatches = passwordEncoder.matches(password, storedPassword);
+        } else {
+            // Legacy plain text password (for backward compatibility with existing users)
+            // Compare directly, but log a warning
+            logger.warn("User {} has plain text password. Consider migrating to hashed password.", email);
+            passwordMatches = password.equals(storedPassword);
+            
+            // Optionally, automatically upgrade to hashed password on successful login
+            if (passwordMatches) {
+                String hashedPassword = passwordEncoder.encode(password);
+                Query query = new Query(Criteria.where("_id").is(user.getIdUtilisateur()));
+                Update update = new Update().set("motDePasse", hashedPassword);
+                mongoTemplate.updateFirst(query, update, Utilisateur.class);
+                logger.info("Upgraded plain text password to hashed password for user: {}", email);
+            }
+        }
+
+        if (!passwordMatches) {
             throw new IllegalArgumentException("Password incorrect!");
         }
 
@@ -441,5 +492,65 @@ public class UtilisateurService {
             .collect(Collectors.toList());
         
         return favorites;
+    }
+
+    // ----------------------------------------------------------------------
+    // ADMIN COMMUNAL OPERATIONS
+    // ----------------------------------------------------------------------
+    public Utilisateur createAdminCommunal(String nom, String email, String password, String villeId) {
+        logger.info("Creating admin communal - Name: {}, Email: {}, City ID: {}", nom, email, villeId);
+        
+        // Validate email doesn't exist
+        if (utilisateurRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists!");
+        }
+        
+        // Validate city exists
+        Optional<Ville> villeOpt = villeService.getVilleById(villeId);
+        if (villeOpt.isEmpty()) {
+            throw new IllegalArgumentException("City with ID " + villeId + " not found!");
+        }
+        
+        // Check if city already has an admin communal (optional - you can remove this if multiple admins per city are allowed)
+        List<Utilisateur> existingAdmins = utilisateurRepository.findAll().stream()
+            .filter(u -> u.getRole() == Role.ADMIN_COMMUNAL && villeId.equals(u.getVilleAssociee()))
+            .collect(Collectors.toList());
+        
+        if (!existingAdmins.isEmpty()) {
+            logger.warn("City {} already has an admin communal. Creating anyway.", villeId);
+            // You can uncomment the line below to prevent multiple admins per city
+            // throw new IllegalArgumentException("City already has an admin communal!");
+        }
+        
+        // Hash the password
+        String hashedPassword = passwordEncoder.encode(password);
+        logger.debug("Password hashed successfully for admin communal: {}", email);
+        
+        // Create admin communal user
+        Utilisateur admin = new Utilisateur(nom, email, hashedPassword);
+        admin.setRole(Role.ADMIN_COMMUNAL);
+        admin.setVilleAssociee(villeId);
+        
+        Utilisateur savedAdmin = utilisateurRepository.save(admin);
+        logger.info("Admin communal created successfully - ID: {}, Email: {}, City: {}", 
+            savedAdmin.getIdUtilisateur(), email, villeId);
+        
+        return savedAdmin;
+    }
+
+    public Optional<Utilisateur> getAdminCommunalByCity(String villeId) {
+        logger.debug("Finding admin communal for city: {}", villeId);
+        List<Utilisateur> admins = utilisateurRepository.findAll().stream()
+            .filter(u -> u.getRole() == Role.ADMIN_COMMUNAL && villeId.equals(u.getVilleAssociee()))
+            .collect(Collectors.toList());
+        
+        return admins.isEmpty() ? Optional.empty() : Optional.of(admins.get(0));
+    }
+
+    public List<Utilisateur> getAllAdminCommunaux() {
+        logger.debug("Fetching all admin communaux");
+        return utilisateurRepository.findAll().stream()
+            .filter(u -> u.getRole() == Role.ADMIN_COMMUNAL)
+            .collect(Collectors.toList());
     }
 }

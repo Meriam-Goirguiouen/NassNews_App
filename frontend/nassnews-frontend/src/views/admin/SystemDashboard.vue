@@ -43,6 +43,18 @@ const cityForm = ref({
   population: 0
 });
 
+// Admin Communal management
+const showAdminModal = ref(false);
+const adminForm = ref({
+  nom: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  villeId: ''
+});
+const communalAdmins = ref<any[]>([]);
+const isLoadingAdmins = ref(false);
+
 // Statistics
 const stats = ref({
   totalUsers: 0,
@@ -71,8 +83,32 @@ const loadAllData = async () => {
   await Promise.all([
     userStore.fetchUsers(),
     cityStore.fetchCities(),
+    fetchCommunalAdmins(),
     // Note: News and events would need to be fetched for all cities or aggregated
   ]);
+};
+
+const fetchCommunalAdmins = async () => {
+  isLoadingAdmins.value = true;
+  try {
+    const response = await fetch('http://localhost:8080/api/utilisateurs/admin-communal', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (response.ok) {
+      communalAdmins.value = await response.json();
+    } else {
+      console.error('Failed to fetch communal admins');
+      communalAdmins.value = [];
+    }
+  } catch (error) {
+    console.error('Error fetching communal admins:', error);
+    communalAdmins.value = [];
+  } finally {
+    isLoadingAdmins.value = false;
+  }
 };
 
 const calculateStats = () => {
@@ -83,7 +119,7 @@ const calculateStats = () => {
     totalCities: cityStore.cities.length,
     totalNews: 0, // Would need to fetch from backend
     totalEvents: 0, // Would need to fetch from backend
-    communalAdmins: userStore.communalAdmins.length,
+    communalAdmins: communalAdmins.value.length,
     systemAdmins: userStore.systemAdmins.length,
   };
 };
@@ -93,6 +129,7 @@ const handleActivateUser = async (userId: number) => {
   if (confirm('Are you sure you want to activate this user?')) {
     try {
       await userStore.activateUser(userId);
+      await fetchCommunalAdmins();
       calculateStats();
     } catch (error: any) {
       alert(error.message || 'Failed to activate user');
@@ -104,6 +141,7 @@ const handleSuspendUser = async (userId: number) => {
   if (confirm('Are you sure you want to suspend this user?')) {
     try {
       await userStore.suspendUser(userId);
+      await fetchCommunalAdmins();
       calculateStats();
     } catch (error: any) {
       alert(error.message || 'Failed to suspend user');
@@ -115,6 +153,7 @@ const handleDeleteUser = async (userId: number) => {
   if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
     try {
       await userStore.deleteUser(userId);
+      await fetchCommunalAdmins();
       calculateStats();
     } catch (error: any) {
       alert(error.message || 'Failed to delete user');
@@ -232,6 +271,80 @@ const handleLogout = () => {
 const refreshData = async () => {
   await loadAllData();
   calculateStats();
+};
+
+// Admin Communal management
+const openAdminModal = () => {
+  adminForm.value = {
+    nom: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    villeId: ''
+  };
+  showAdminModal.value = true;
+};
+
+const closeAdminModal = () => {
+  showAdminModal.value = false;
+  adminForm.value = {
+    nom: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    villeId: ''
+  };
+};
+
+const handleCreateAdminCommunal = async () => {
+  // Validation
+  if (!adminForm.value.nom || !adminForm.value.email || !adminForm.value.password || !adminForm.value.villeId) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  if (adminForm.value.password !== adminForm.value.confirmPassword) {
+    alert('Passwords do not match');
+    return;
+  }
+
+  if (adminForm.value.password.length < 6) {
+    alert('Password must be at least 6 characters long');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:8080/api/utilisateurs/admin-communal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nom: adminForm.value.nom,
+        email: adminForm.value.email,
+        password: adminForm.value.password,
+        villeId: adminForm.value.villeId
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to create admin communal' }));
+      throw new Error(errorData.message || 'Failed to create admin communal');
+    }
+
+    await fetchCommunalAdmins();
+    await userStore.fetchUsers();
+    calculateStats();
+    closeAdminModal();
+    alert('Admin communal created successfully!');
+  } catch (error: any) {
+    alert(error.message || 'Failed to create admin communal');
+  }
+};
+
+const getCityName = (villeId: string) => {
+  const city = cityStore.cities.find(c => c.id === villeId);
+  return city ? city.name : 'Unknown City';
 };
 </script>
 
@@ -528,23 +641,49 @@ const refreshData = async () => {
 
         <!-- Communal Admins Section -->
         <section v-if="activeSection === 'communal-admins'" class="space-y-6">
-          <h2 class="text-3xl font-bold text-gray-900">Communal Administrator Management</h2>
+          <div class="flex items-center justify-between">
+            <h2 class="text-3xl font-bold text-gray-900">Communal Administrator Management</h2>
+            <button
+              @click="openAdminModal()"
+              class="flex items-center gap-2 px-4 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
+            >
+              <Plus :size="18" />
+              <span>Add Admin Communal</span>
+            </button>
+          </div>
 
-          <div class="bg-white rounded-3xl shadow-md overflow-hidden">
+          <div v-if="isLoadingAdmins" class="bg-white rounded-3xl p-6 shadow-md text-center">
+            <p class="text-gray-600">Loading admin communaux...</p>
+          </div>
+
+          <div v-else-if="communalAdmins.length === 0" class="bg-white rounded-3xl p-6 shadow-md text-center">
+            <Shield :size="48" class="mx-auto text-gray-400 mb-4" />
+            <p class="text-gray-600">No communal administrators found.</p>
+            <p class="text-sm text-gray-500 mt-2">Click "Add Admin Communal" to create one.</p>
+          </div>
+
+          <div v-else class="bg-white rounded-3xl shadow-md overflow-hidden">
             <div class="overflow-x-auto">
               <table class="w-full">
                 <thead class="bg-gray-50">
                   <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Associated City</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                  <tr v-for="admin in userStore.communalAdmins" :key="admin.idUtilisateur" class="hover:bg-gray-50">
+                  <tr v-for="admin in communalAdmins" :key="admin.idUtilisateur" class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{{ admin.nom }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-gray-600">{{ admin.email }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <MapPin :size="16" class="text-[#7A1F1F]" />
+                        <span class="text-gray-700">{{ getCityName(admin.villeAssociee) }}</span>
+                      </div>
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class="px-2 py-1 text-xs rounded-full" :class="{
                         'bg-green-100 text-green-800': admin.active !== false,
@@ -765,6 +904,114 @@ const refreshData = async () => {
       </main>
     </div>
 
+    <!-- Admin Communal Modal Popup -->
+    <Transition name="modal">
+      <div
+        v-if="showAdminModal"
+        class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        @click.self="closeAdminModal"
+      >
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl transform transition-all animate-popup max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-[#7A1F1F] bg-opacity-10 rounded-lg">
+                <Shield :size="24" class="text-[#7A1F1F]" />
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900">Add Admin Communal</h3>
+            </div>
+            <button
+              @click="closeAdminModal"
+              class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-1 transition-colors"
+            >
+              <X :size="24" />
+            </button>
+          </div>
+
+        <form @submit.prevent="handleCreateAdminCommunal" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+            <input
+              v-model="adminForm.nom"
+              type="text"
+              required
+              placeholder="Enter admin's full name"
+              class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+            <input
+              v-model="adminForm.email"
+              type="email"
+              required
+              placeholder="admin@example.com"
+              class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+            <input
+              v-model="adminForm.password"
+              type="password"
+              required
+              placeholder="Minimum 6 characters"
+              minlength="6"
+              class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
+            <input
+              v-model="adminForm.confirmPassword"
+              type="password"
+              required
+              placeholder="Re-enter password"
+              minlength="6"
+              class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Associated City *</label>
+            <select
+              v-model="adminForm.villeId"
+              required
+              class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+            >
+              <option value="">Select a city</option>
+              <option
+                v-for="city in cityStore.cities"
+                :key="city.id"
+                :value="city.id"
+              >
+                {{ city.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex gap-4 pt-4">
+            <button
+              type="button"
+              @click="closeAdminModal"
+              class="flex-1 px-4 py-2 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-[#7A1F1F] text-white rounded-xl hover:bg-[#6A1A1A] transition-colors"
+            >
+              Create Admin
+            </button>
+          </div>
+        </form>
+        </div>
+      </div>
+    </Transition>
+
     <!-- City Modal -->
     <div
       v-if="showCityModal"
@@ -845,3 +1092,47 @@ const refreshData = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Modal transition animations */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .animate-popup,
+.modal-leave-active .animate-popup {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-enter-from .animate-popup {
+  transform: scale(0.9) translateY(-20px);
+  opacity: 0;
+}
+
+.modal-leave-to .animate-popup {
+  transform: scale(0.95);
+  opacity: 0;
+}
+
+/* Popup animation */
+@keyframes popup {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-popup {
+  animation: popup 0.3s ease-out;
+}
+</style>
