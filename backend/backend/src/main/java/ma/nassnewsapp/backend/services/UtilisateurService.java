@@ -6,6 +6,10 @@ import ma.nassnewsapp.backend.repositories.UtilisateurRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,11 +22,13 @@ public class UtilisateurService {
 
     private final UtilisateurRepository utilisateurRepository;
     private final VilleService villeService;
+    private final MongoTemplate mongoTemplate;
 
     @Autowired
-    public UtilisateurService(UtilisateurRepository utilisateurRepository, VilleService villeService) {
+    public UtilisateurService(UtilisateurRepository utilisateurRepository, VilleService villeService, MongoTemplate mongoTemplate) {
         this.utilisateurRepository = utilisateurRepository;
         this.villeService = villeService;
+        this.mongoTemplate = mongoTemplate;
         logger.info("UtilisateurService initialized");
     }
 
@@ -44,7 +50,7 @@ public class UtilisateurService {
     // GET BY EMAIL
     // ----------------------------------------------------------------------
     public Optional<Utilisateur> getUtilisateurByEmail(String email) {
-        return utilisateurRepository.findByEmail(email);
+        return utilisateurRepository.findFirstByEmail(email);
     }
 
     // ----------------------------------------------------------------------
@@ -127,7 +133,7 @@ public class UtilisateurService {
     // ----------------------------------------------------------------------
     public Utilisateur authenticateUser(String email, String password) {
 
-        Optional<Utilisateur> optionalUser = utilisateurRepository.findByEmail(email);
+        Optional<Utilisateur> optionalUser = utilisateurRepository.findFirstByEmail(email);
 
         if (optionalUser.isEmpty()) {
             throw new IllegalArgumentException("User not found!");
@@ -140,5 +146,199 @@ public class UtilisateurService {
         }
 
         return user;
+    }
+
+    // ----------------------------------------------------------------------
+    // FAVORITE NEWS OPERATIONS
+    // ----------------------------------------------------------------------
+    public boolean addFavoriteNews(String userId, String newsId) {
+        logger.info("Adding favorite news - User ID: {}, News ID: {}", userId, newsId);
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} using findById", userId);
+            // Log all users to help debug
+            List<Utilisateur> users = utilisateurRepository.findAll();
+            logger.warn("Total users in database: {}", users.size());
+            for (Utilisateur u : users) {
+                logger.warn("User in DB - _id: {}, idUtilisateur: {}, email: {}", 
+                    u.getIdUtilisateur(), u.getIdUtilisateur(), u.getEmail());
+                // Check if any user's ID matches (case-insensitive)
+                if (u.getIdUtilisateur() != null && u.getIdUtilisateur().equals(userId)) {
+                    logger.info("Found matching user by direct comparison");
+                    userOpt = Optional.of(u);
+                    break;
+                }
+            }
+            if (userOpt.isEmpty()) {
+                logger.error("User with ID {} does not exist in database", userId);
+                return false;
+            }
+        }
+        
+        Utilisateur user = userOpt.get();
+        logger.debug("User before update - ID: {}, Email: {}, Favorites: {}", 
+            user.getIdUtilisateur(), user.getEmail(), user.getActualitesFavorites());
+        
+        // Create a new list to ensure MongoDB detects the change
+        List<String> favoritesList = user.getActualitesFavorites() != null 
+            ? new java.util.ArrayList<>(user.getActualitesFavorites()) 
+            : new java.util.ArrayList<>();
+        
+        if (!favoritesList.contains(newsId)) {
+            favoritesList.add(newsId);
+            logger.debug("Added news {} to list. List now contains: {}", newsId, favoritesList);
+            
+            // Use MongoTemplate to explicitly update the existing document
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("actualitesFavorites", favoritesList);
+            
+            // Use findAndModify to update and return the updated document
+            Utilisateur updatedUser = mongoTemplate.findAndModify(query, update, Utilisateur.class);
+            
+            if (updatedUser != null) {
+                logger.info("User updated successfully. User ID: {}, Email: {}, Favorites: {}", 
+                    updatedUser.getIdUtilisateur(), updatedUser.getEmail(), favoritesList);
+            } else {
+                logger.error("CRITICAL: Update operation returned null for user ID: {}", userId);
+                return false;
+            }
+            
+            // Verify the update worked by reading back from DB
+            Optional<Utilisateur> verifyUser = utilisateurRepository.findById(userId);
+            if (verifyUser.isPresent()) {
+                List<String> dbFavorites = verifyUser.get().getActualitesFavorites();
+                logger.info("Verification - User in DB after update has favorites: {}", dbFavorites);
+                if (dbFavorites == null || !dbFavorites.contains(newsId)) {
+                    logger.error("CRITICAL: Update verification failed! News ID not found in DB after update.");
+                }
+            } else {
+                logger.error("CRITICAL: User not found after update!");
+            }
+        } else {
+            logger.debug("News {} already in favorites for user {}", newsId, userId);
+        }
+        
+        return true;
+    }
+
+    public boolean removeFavoriteNews(String userId, String newsId) {
+        logger.info("Removing favorite news - User ID: {}, News ID: {}", userId, newsId);
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when removing favorite news", userId);
+            return false;
+        }
+        
+        Utilisateur user = userOpt.get();
+        // Ensure the ID is preserved (critical for update vs insert)
+        if (user.getIdUtilisateur() == null || user.getIdUtilisateur().isEmpty()) {
+            logger.error("CRITICAL: User ID is null or empty! Setting from userId parameter: {}", userId);
+            user.setIdUtilisateur(userId);
+        }
+        
+        if (user.getActualitesFavorites() != null && user.getActualitesFavorites().contains(newsId)) {
+            // Create a new list without the newsId
+            List<String> favoritesList = new java.util.ArrayList<>(user.getActualitesFavorites());
+            favoritesList.remove(newsId);
+            
+            // Use MongoTemplate to explicitly update the existing document
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("actualitesFavorites", favoritesList);
+            
+            mongoTemplate.findAndModify(query, update, Utilisateur.class);
+            logger.info("Successfully removed news {} from favorites for user {}", newsId, userId);
+        }
+        
+        return true;
+    }
+
+    public List<String> getFavoriteNews(String userId) {
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when getting favorite news", userId);
+            return null;
+        }
+        
+        Utilisateur user = userOpt.get();
+        return user.getActualitesFavorites() != null ? user.getActualitesFavorites() : new java.util.ArrayList<>();
+    }
+
+    // ----------------------------------------------------------------------
+    // FAVORITE EVENTS OPERATIONS
+    // ----------------------------------------------------------------------
+    public boolean addFavoriteEvent(String userId, String eventId) {
+        logger.info("Adding favorite event - User ID: {}, Event ID: {}", userId, eventId);
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when adding favorite event", userId);
+            return false;
+        }
+        
+        Utilisateur user = userOpt.get();
+        logger.debug("User before update - ID: {}, Email: {}, Event Favorites: {}", 
+            user.getIdUtilisateur(), user.getEmail(), user.getEvenementsFavorites());
+        
+        // Ensure the ID is preserved (critical for update vs insert)
+        if (user.getIdUtilisateur() == null || user.getIdUtilisateur().isEmpty()) {
+            logger.error("CRITICAL: User ID is null or empty! Setting from userId parameter: {}", userId);
+            user.setIdUtilisateur(userId);
+        }
+        
+        // Create a new list to ensure MongoDB detects the change
+        List<String> favoritesList = user.getEvenementsFavorites() != null 
+            ? new java.util.ArrayList<>(user.getEvenementsFavorites()) 
+            : new java.util.ArrayList<>();
+        
+        if (!favoritesList.contains(eventId)) {
+            favoritesList.add(eventId);
+            logger.debug("Added event {} to list. List now contains: {}", eventId, favoritesList);
+            
+            // Use MongoTemplate to explicitly update the existing document
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("evenementsFavorites", favoritesList);
+            
+            mongoTemplate.findAndModify(query, update, Utilisateur.class);
+            logger.info("User updated. Event favorites: {}", favoritesList);
+        } else {
+            logger.debug("Event {} already in favorites for user {}", eventId, userId);
+        }
+        
+        return true;
+    }
+
+    public boolean removeFavoriteEvent(String userId, String eventId) {
+        logger.info("Removing favorite event - User ID: {}, Event ID: {}", userId, eventId);
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when removing favorite event", userId);
+            return false;
+        }
+        
+        Utilisateur user = userOpt.get();
+        if (user.getEvenementsFavorites() != null && user.getEvenementsFavorites().contains(eventId)) {
+            // Create a new list without the eventId
+            List<String> favoritesList = new java.util.ArrayList<>(user.getEvenementsFavorites());
+            favoritesList.remove(eventId);
+            
+            // Use MongoTemplate to explicitly update the existing document
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("evenementsFavorites", favoritesList);
+            
+            mongoTemplate.findAndModify(query, update, Utilisateur.class);
+            logger.info("Successfully removed event {} from favorites for user {}", eventId, userId);
+        }
+        
+        return true;
+    }
+
+    public List<String> getFavoriteEvents(String userId) {
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when getting favorite events", userId);
+            return null;
+        }
+        
+        Utilisateur user = userOpt.get();
+        return user.getEvenementsFavorites() != null ? user.getEvenementsFavorites() : new java.util.ArrayList<>();
     }
 }

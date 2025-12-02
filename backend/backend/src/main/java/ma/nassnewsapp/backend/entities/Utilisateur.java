@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 public class Utilisateur {
 
     @Id
-    @Field("_id")
+    @com.fasterxml.jackson.annotation.JsonProperty("idUtilisateur")
     private String idUtilisateur;
 
     private String nom;
@@ -21,7 +21,11 @@ public class Utilisateur {
 
     private Role role; // UTILISATEUR, ADMIN_COMMUNAL, ADMIN_SYSTEME
 
-    private List<String> villesFavorites; // Liste d’ID de villes favorites
+    private List<String> villesFavorites; // Liste d'ID de villes favorites
+    
+    private List<String> actualitesFavorites; // Liste d'ID d'actualités favorites
+    
+    private List<String> evenementsFavorites; // Liste d'ID d'événements favorites
 
     public Utilisateur (){}
 
@@ -78,6 +82,22 @@ public class Utilisateur {
 
     public void setVillesFavorites(List<String> villesFavorites) {
         this.villesFavorites = villesFavorites;
+    }
+
+    public List<String> getActualitesFavorites() {
+        return actualitesFavorites;
+    }
+
+    public void setActualitesFavorites(List<String> actualitesFavorites) {
+        this.actualitesFavorites = actualitesFavorites;
+    }
+
+    public List<String> getEvenementsFavorites() {
+        return evenementsFavorites;
+    }
+
+    public void setEvenementsFavorites(List<String> evenementsFavorites) {
+        this.evenementsFavorites = evenementsFavorites;
     }
 }
 

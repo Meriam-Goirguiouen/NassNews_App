@@ -11,7 +11,8 @@ public interface UtilisateurRepository extends MongoRepository<Utilisateur, Stri
 
     // Spring Data MongoDB va automatiquement générer une implémentation pour cette méthode
     // Elle trouvera un utilisateur par son adresse e-mail.
-    Optional<Utilisateur> findByEmail(String email);
+    // Utilise findFirstByEmail pour gérer les doublons (retourne le premier trouvé)
+    Optional<Utilisateur> findFirstByEmail(String email);
     boolean existsByEmail(String email);
     // boolean existsByUsername(String nom);
 

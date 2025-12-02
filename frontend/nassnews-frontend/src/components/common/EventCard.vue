@@ -1,12 +1,113 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import type { Event } from '../../types';
+import { Heart } from 'lucide-vue-next';
+import { useAuthStore } from '../../stores/auth';
+import { useEventStore } from '../../stores/event';
 
 interface Props {
   event: Event;
+  showFavoriteButton?: boolean;
+  isFavorited?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  showFavoriteButton: false,
+  isFavorited: undefined
+});
+
+const emit = defineEmits<{
+  favorite: [eventId: string | number];
+}>();
+
+const authStore = useAuthStore();
+const eventStore = useEventStore();
+const favoriteEventIds = ref<string[]>([]);
+const isFavoriteLoading = ref(false);
+
+onMounted(async () => {
+  // Load favorites from API if user is authenticated
+  if (authStore.isAuthenticated && authStore.currentUser?.id) {
+    try {
+      const favorites = await eventStore.getFavoriteEvents(String(authStore.currentUser.id));
+      favoriteEventIds.value = favorites.map(id => String(id));
+    } catch (e) {
+      console.error('Error loading favorite events:', e);
+    }
+  } else {
+    // Fallback to localStorage for non-authenticated users
+    const saved = localStorage.getItem('favoriteEvents');
+    if (saved) {
+      try {
+        favoriteEventIds.value = JSON.parse(saved);
+      } catch (e) {
+        console.error('Error loading favorite events from localStorage:', e);
+      }
+    }
+  }
+});
+
+const isFavorited = computed(() => {
+  if (props.isFavorited !== undefined) {
+    return props.isFavorited;
+  }
+  return favoriteEventIds.value.includes(String(props.event.id));
+});
+
+const toggleFavorite = async (e: Event) => {
+  e.stopPropagation();
+  
+  if (!authStore.isAuthenticated || !authStore.currentUser?.id) {
+    // Fallback to localStorage for non-authenticated users
+    const idStr = String(props.event.id);
+    const index = favoriteEventIds.value.indexOf(idStr);
+    if (index > -1) {
+      favoriteEventIds.value.splice(index, 1);
+    } else {
+      favoriteEventIds.value.push(idStr);
+    }
+    localStorage.setItem('favoriteEvents', JSON.stringify(favoriteEventIds.value));
+    emit('favorite', props.event.id);
+    return;
+  }
+
+  // Use API for authenticated users
+  if (isFavoriteLoading.value) return;
+  
+  isFavoriteLoading.value = true;
+  const userId = String(authStore.currentUser.id);
+  const eventId = props.event.id;
+  const currentlyFavorited = isFavorited.value;
+
+  try {
+    let success = false;
+    if (currentlyFavorited) {
+      success = await eventStore.removeFavoriteEvent(userId, eventId);
+    } else {
+      success = await eventStore.addFavoriteEvent(userId, eventId);
+    }
+
+    if (success) {
+      // Update local state
+      const idStr = String(eventId);
+      const index = favoriteEventIds.value.indexOf(idStr);
+      if (currentlyFavorited) {
+        if (index > -1) {
+          favoriteEventIds.value.splice(index, 1);
+        }
+      } else {
+        if (index === -1) {
+          favoriteEventIds.value.push(idStr);
+        }
+      }
+      emit('favorite', eventId);
+    }
+  } catch (error) {
+    console.error('Error toggling favorite event:', error);
+  } finally {
+    isFavoriteLoading.value = false;
+  }
+};
 
 const formattedDate = computed(() => {
   const date = new Date(props.event.date);
@@ -18,7 +119,15 @@ const formattedDate = computed(() => {
 </script>
 
 <template>
-  <article class="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex cursor-pointer transform hover:-translate-y-1">
+  <article class="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex cursor-pointer transform hover:-translate-y-1 relative">
+    <button
+      v-if="showFavoriteButton"
+      @click="toggleFavorite"
+      class="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors z-10"
+      :title="isFavorited ? 'Remove from favorites' : 'Add to favorites'"
+    >
+      <Heart :size="20" :class="isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-400'" />
+    </button>
     <div class="bg-[#7A1F1F] text-white flex flex-col items-center justify-center p-6 min-w-[100px]">
       <div class="text-3xl font-bold">{{ formattedDate.day }}</div>
       <div class="text-sm font-semibold">{{ formattedDate.month }}</div>

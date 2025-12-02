@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import AppButton from '../components/common/AppButton.vue';
 import logoWide from '../assets/logoWide.png';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
 const email = ref('');
@@ -18,13 +19,20 @@ const handleLogin = async () => {
   });
 
   if (success && authStore.currentUser) {
-    // Redirect based on role
-    //console.log('Login successful, user role:', authStore.currentUser.role);
-     // Affichage pour vérification
+    // Check if there's a redirect query parameter
+    const redirectPath = route.query.redirect as string;
+    
+    if (redirectPath) {
+      // Redirect to the originally requested path
+      router.push(redirectPath);
+      return;
+    }
+    
+    // Redirect based on role if no redirect parameter
     console.log('Login successful !');
     console.log('user role:', authStore.currentUser.role);
-    console.log('Token:', authStore.token); // Affiche le token
-    console.log('Email:', authStore.currentUser.email); // Affiche l'email
+    console.log('Token:', authStore.token);
+    console.log('Email:', authStore.currentUser.email);
     
     if (authStore.isCitizen) {
       router.push('/feed');

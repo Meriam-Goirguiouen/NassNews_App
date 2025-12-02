@@ -100,6 +100,15 @@ const setDefaultCity = async () => {
 
 // Fetch data on mount
 onMounted(async () => {
+  // Check authentication first
+  authStore.checkAuth();
+  
+  // If not authenticated, redirect to login
+  if (!authStore.isAuthenticated || !authStore.token) {
+    router.push({ path: '/login', query: { redirect: '/feed' } });
+    return;
+  }
+  
   // Load cities
   await cityStore.fetchCities();
   cityStore.loadSavedCity();
@@ -373,7 +382,12 @@ const handleLogout = () => {
           </div>
           
           <div v-else-if="eventStore.eventsList.length > 0" class="grid md:grid-cols-2 gap-6">
-            <EventCard v-for="event in eventStore.eventsList" :key="event.id" :event="event" />
+            <EventCard 
+              v-for="event in eventStore.eventsList" 
+              :key="event.id" 
+              :event="event" 
+              :show-favorite-button="true"
+            />
           </div>
           
           <div v-else class="bg-white rounded-3xl p-12 text-center">

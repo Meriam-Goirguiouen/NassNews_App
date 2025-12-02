@@ -103,6 +103,128 @@ public class UtilisateurController {
     ));
     }
 
+    // --- Favorite News Endpoints ---
+    @PostMapping("/{userId}/favorites/news/{newsId}")
+    public ResponseEntity<Map<String, Object>> addFavoriteNews(
+            @PathVariable String userId,
+            @PathVariable String newsId) {
+        try {
+            boolean success = utilisateurService.addFavoriteNews(userId, newsId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "News added to favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/{userId}/favorites/news/{newsId}")
+    public ResponseEntity<Map<String, Object>> removeFavoriteNews(
+            @PathVariable String userId,
+            @PathVariable String newsId) {
+        try {
+            boolean success = utilisateurService.removeFavoriteNews(userId, newsId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "News removed from favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{userId}/favorites/news")
+    public ResponseEntity<List<String>> getFavoriteNews(@PathVariable String userId) {
+        List<String> favorites = utilisateurService.getFavoriteNews(userId);
+        if (favorites != null) {
+            return ResponseEntity.ok(favorites);
+        }
+        // Return empty list if user not found (better than 404 for UX)
+        return ResponseEntity.ok(new java.util.ArrayList<>());
+    }
+
+    // --- Favorite Events Endpoints ---
+    @PostMapping("/{userId}/favorites/events/{eventId}")
+    public ResponseEntity<Map<String, Object>> addFavoriteEvent(
+            @PathVariable String userId,
+            @PathVariable String eventId) {
+        try {
+            boolean success = utilisateurService.addFavoriteEvent(userId, eventId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "Event added to favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/{userId}/favorites/events/{eventId}")
+    public ResponseEntity<Map<String, Object>> removeFavoriteEvent(
+            @PathVariable String userId,
+            @PathVariable String eventId) {
+        try {
+            boolean success = utilisateurService.removeFavoriteEvent(userId, eventId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "Event removed from favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{userId}/favorites/events")
+    public ResponseEntity<List<String>> getFavoriteEvents(@PathVariable String userId) {
+        List<String> favorites = utilisateurService.getFavoriteEvents(userId);
+        if (favorites != null) {
+            return ResponseEntity.ok(favorites);
+        }
+        // Return empty list if user not found (better than 404 for UX)
+        return ResponseEntity.ok(new java.util.ArrayList<>());
+    }
+
     // --- Classes internes pour les requêtes ---
     public static class SignupRequest {
         private String nom;

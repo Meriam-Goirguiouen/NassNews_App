@@ -3,35 +3,79 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useNewsStore } from '../stores/news';
+import { useEventStore } from '../stores/event';
 import NewsCard from '../components/common/NewsCard.vue';
+import EventCard from '../components/common/EventCard.vue';
 import logoWide from '../assets/logoWide.png';
-import { Home, Heart, History, Settings, MapPin, LogOut, Search, User } from 'lucide-vue-next';
+import { Home, Heart, History, Settings, MapPin, LogOut, Search, User, Calendar } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const newsStore = useNewsStore();
+const eventStore = useEventStore();
 
 // Sidebar state
 const activeMenuItem = ref('favorites');
 const searchQuery = ref('');
+const activeTab = ref<'news' | 'events'>('news');
 
-// Favorite news (stored in localStorage for now)
+// Favorite news and events
 const favoriteNewsIds = ref<string[]>([]);
+const favoriteEventIds = ref<string[]>([]);
+const isLoadingFavorites = ref(false);
 
 onMounted(async () => {
-  // Load favorites from localStorage
-  const saved = localStorage.getItem('favoriteNews');
-  if (saved) {
+  isLoadingFavorites.value = true;
+  
+  // Fetch all news and events from database
+  await Promise.all([
+    newsStore.fetchAllNews(),
+    eventStore.fetchAllEvents()
+  ]);
+  
+  // Load favorites from API if user is authenticated
+  if (authStore.isAuthenticated && authStore.currentUser?.id) {
     try {
-      favoriteNewsIds.value = JSON.parse(saved);
+      const userId = String(authStore.currentUser.id);
+      const [newsFavorites, eventFavorites] = await Promise.all([
+        newsStore.getFavoriteNews(userId),
+        eventStore.getFavoriteEvents(userId)
+      ]);
+      favoriteNewsIds.value = newsFavorites.map(id => String(id));
+      favoriteEventIds.value = eventFavorites.map(id => String(id));
     } catch (e) {
       console.error('Error loading favorites:', e);
+      // Fallback to localStorage
+      loadFromLocalStorage();
+    }
+  } else {
+    // Fallback to localStorage for non-authenticated users
+    loadFromLocalStorage();
+  }
+  
+  isLoadingFavorites.value = false;
+});
+
+function loadFromLocalStorage() {
+  const savedNews = localStorage.getItem('favoriteNews');
+  const savedEvents = localStorage.getItem('favoriteEvents');
+  
+  if (savedNews) {
+    try {
+      favoriteNewsIds.value = JSON.parse(savedNews);
+    } catch (e) {
+      console.error('Error loading favorites from localStorage:', e);
     }
   }
   
-  // Fetch all news from database
-  await newsStore.fetchAllNews();
-});
+  if (savedEvents) {
+    try {
+      favoriteEventIds.value = JSON.parse(savedEvents);
+    } catch (e) {
+      console.error('Error loading favorite events from localStorage:', e);
+    }
+  }
+}
 
 // Filter news to show only favorites
 const favoriteNews = computed(() => {
@@ -52,21 +96,113 @@ const favoriteNews = computed(() => {
   return filtered;
 });
 
-// Toggle favorite status
-const toggleFavorite = (newsId: string | number) => {
-  const idStr = String(newsId);
-  const index = favoriteNewsIds.value.indexOf(idStr);
-  if (index > -1) {
-    favoriteNewsIds.value.splice(index, 1);
-  } else {
-    favoriteNewsIds.value.push(idStr);
+// Filter events to show only favorites
+const favoriteEvents = computed(() => {
+  let filtered = eventStore.eventsList.filter(event => 
+    favoriteEventIds.value.includes(String(event.id))
+  );
+  
+  // Apply search filter if query exists
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(event =>
+      event.title.toLowerCase().includes(query) ||
+      (event.description && event.description.toLowerCase().includes(query)) ||
+      (event.type && event.type.toLowerCase().includes(query))
+    );
   }
-  localStorage.setItem('favoriteNews', JSON.stringify(favoriteNewsIds.value));
+  
+  return filtered;
+});
+
+// Toggle favorite news status
+const toggleFavoriteNews = async (newsId: string | number) => {
+  if (!authStore.isAuthenticated || !authStore.currentUser?.id) {
+    // Fallback to localStorage
+    const idStr = String(newsId);
+    const index = favoriteNewsIds.value.indexOf(idStr);
+    if (index > -1) {
+      favoriteNewsIds.value.splice(index, 1);
+    } else {
+      favoriteNewsIds.value.push(idStr);
+    }
+    localStorage.setItem('favoriteNews', JSON.stringify(favoriteNewsIds.value));
+    return;
+  }
+
+  const userId = String(authStore.currentUser.id);
+  const isFavorited = favoriteNewsIds.value.includes(String(newsId));
+  
+  try {
+    let success = false;
+    if (isFavorited) {
+      success = await newsStore.removeFavoriteNews(userId, newsId);
+    } else {
+      success = await newsStore.addFavoriteNews(userId, newsId);
+    }
+    
+    if (success) {
+      const idStr = String(newsId);
+      const index = favoriteNewsIds.value.indexOf(idStr);
+      if (isFavorited) {
+        if (index > -1) favoriteNewsIds.value.splice(index, 1);
+      } else {
+        if (index === -1) favoriteNewsIds.value.push(idStr);
+      }
+    }
+  } catch (error) {
+    console.error('Error toggling favorite news:', error);
+  }
+};
+
+// Toggle favorite event status
+const toggleFavoriteEvent = async (eventId: string | number) => {
+  if (!authStore.isAuthenticated || !authStore.currentUser?.id) {
+    // Fallback to localStorage
+    const idStr = String(eventId);
+    const index = favoriteEventIds.value.indexOf(idStr);
+    if (index > -1) {
+      favoriteEventIds.value.splice(index, 1);
+    } else {
+      favoriteEventIds.value.push(idStr);
+    }
+    localStorage.setItem('favoriteEvents', JSON.stringify(favoriteEventIds.value));
+    return;
+  }
+
+  const userId = String(authStore.currentUser.id);
+  const isFavorited = favoriteEventIds.value.includes(String(eventId));
+  
+  try {
+    let success = false;
+    if (isFavorited) {
+      success = await eventStore.removeFavoriteEvent(userId, eventId);
+    } else {
+      success = await eventStore.addFavoriteEvent(userId, eventId);
+    }
+    
+    if (success) {
+      const idStr = String(eventId);
+      const index = favoriteEventIds.value.indexOf(idStr);
+      if (isFavorited) {
+        if (index > -1) favoriteEventIds.value.splice(index, 1);
+      } else {
+        if (index === -1) favoriteEventIds.value.push(idStr);
+      }
+    }
+  } catch (error) {
+    console.error('Error toggling favorite event:', error);
+  }
 };
 
 // Check if news is favorited
-const isFavorited = (newsId: string | number) => {
+const isNewsFavorited = (newsId: string | number) => {
   return favoriteNewsIds.value.includes(String(newsId));
+};
+
+// Check if event is favorited
+const isEventFavorited = (eventId: string | number) => {
+  return favoriteEventIds.value.includes(String(eventId));
 };
 
 const handleLogout = () => {
@@ -77,6 +213,14 @@ const handleLogout = () => {
 };
 
 const navigateTo = (route: string) => {
+  // Check authentication before navigating to protected routes
+  if (route === '/feed') {
+    authStore.checkAuth();
+    if (!authStore.isAuthenticated || !authStore.token) {
+      router.push({ path: '/login', query: { redirect: '/feed' } });
+      return;
+    }
+  }
   router.push(route);
 };
 </script>
@@ -195,13 +339,45 @@ const navigateTo = (route: string) => {
       <!-- Main Content -->
       <main class="p-6">
         <div class="mb-6">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">Favorite News</h1>
-          <p class="text-gray-600">Your saved news articles</p>
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Favorites</h1>
+          <p class="text-gray-600">Your saved news articles and events</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-6 flex gap-4 border-b border-gray-200">
+          <button
+            @click="activeTab = 'news'"
+            :class="[
+              'px-6 py-3 font-medium transition-colors border-b-2',
+              activeTab === 'news' 
+                ? 'text-[#7A1F1F] border-[#7A1F1F]' 
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            ]"
+          >
+            <div class="flex items-center gap-2">
+              <Heart :size="18" />
+              <span>News ({{ favoriteNews.length }})</span>
+            </div>
+          </button>
+          <button
+            @click="activeTab = 'events'"
+            :class="[
+              'px-6 py-3 font-medium transition-colors border-b-2',
+              activeTab === 'events' 
+                ? 'text-[#7A1F1F] border-[#7A1F1F]' 
+                : 'text-gray-500 border-transparent hover:text-gray-700'
+            ]"
+          >
+            <div class="flex items-center gap-2">
+              <Calendar :size="18" />
+              <span>Events ({{ favoriteEvents.length }})</span>
+            </div>
+          </button>
         </div>
 
         <!-- Favorites Section -->
         <section>
-          <div v-if="newsStore.loading" class="text-center py-12">
+          <div v-if="isLoadingFavorites || newsStore.loading" class="text-center py-12">
             <p class="text-gray-500">Loading favorites...</p>
           </div>
           
@@ -209,29 +385,53 @@ const navigateTo = (route: string) => {
             {{ newsStore.error }}
           </div>
           
-          <div v-else-if="favoriteNews.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="news in favoriteNews" :key="news.id" class="relative">
-              <NewsCard :news="news" />
+          <!-- News Tab -->
+          <div v-else-if="activeTab === 'news'">
+            <div v-if="favoriteNews.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-for="news in favoriteNews" :key="news.id" class="relative">
+                <NewsCard :news="news" :show-favorite-button="true" :is-favorited="isNewsFavorited(news.id)" />
+              </div>
+            </div>
+            
+            <div v-else class="bg-white rounded-3xl p-12 text-center">
+              <Heart :size="48" class="mx-auto text-gray-300 mb-4" />
+              <p class="text-gray-500 text-lg mb-2">No favorite news</p>
+              <p class="text-gray-400 text-sm">Start adding news articles to your favorites</p>
               <button
-                @click="toggleFavorite(news.id)"
-                class="absolute top-4 left-4 p-2 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors z-10"
-                :title="isFavorited(news.id) ? 'Remove from favorites' : 'Add to favorites'"
+                @click="navigateTo('/feed')"
+                class="inline-block mt-4 px-6 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
               >
-                <Heart :size="20" :class="isFavorited(news.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'" />
+                Browse News
               </button>
             </div>
           </div>
-          
-          <div v-else class="bg-white rounded-3xl p-12 text-center">
-            <Heart :size="48" class="mx-auto text-gray-300 mb-4" />
-            <p class="text-gray-500 text-lg mb-2">No favorite news</p>
-            <p class="text-gray-400 text-sm">Start adding news articles to your favorites</p>
-            <router-link
-              to="/feed"
-              class="inline-block mt-4 px-6 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
-            >
-              Browse News
-            </router-link>
+
+          <!-- Events Tab -->
+          <div v-else-if="activeTab === 'events'">
+            <div v-if="favoriteEvents.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div v-for="event in favoriteEvents" :key="event.id" class="relative">
+                <EventCard :event="event" />
+                <button
+                  @click="toggleFavoriteEvent(event.id)"
+                  class="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors z-10"
+                  :title="isEventFavorited(event.id) ? 'Remove from favorites' : 'Add to favorites'"
+                >
+                  <Heart :size="20" :class="isEventFavorited(event.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'" />
+                </button>
+              </div>
+            </div>
+            
+            <div v-else class="bg-white rounded-3xl p-12 text-center">
+              <Calendar :size="48" class="mx-auto text-gray-300 mb-4" />
+              <p class="text-gray-500 text-lg mb-2">No favorite events</p>
+              <p class="text-gray-400 text-sm">Start adding events to your favorites</p>
+              <button
+                @click="navigateTo('/feed')"
+                class="inline-block mt-4 px-6 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
+              >
+                Browse Events
+              </button>
+            </div>
           </div>
         </section>
       </main>
