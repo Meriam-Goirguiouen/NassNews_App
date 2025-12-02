@@ -67,15 +67,18 @@ const stats = ref({
   systemAdmins: 0
 });
 
-// Error logs (mock for now)
-const errorLogs = ref([
-  { id: 1, timestamp: new Date(), level: 'ERROR', message: 'Database connection timeout', service: 'Database' },
-  { id: 2, timestamp: new Date(Date.now() - 3600000), level: 'WARN', message: 'High memory usage detected', service: 'Server' },
-  { id: 3, timestamp: new Date(Date.now() - 7200000), level: 'INFO', message: 'Scheduled backup completed', service: 'Backup' },
-]);
+// Error logs
+const errorLogs = ref<any[]>([]);
+const isLoadingLogs = ref(false);
+const logFilters = ref({
+  level: '',
+  service: '',
+  hours: 24 // Default: last 24 hours
+});
 
 onMounted(async () => {
   await loadAllData();
+  await fetchErrorLogs();
   calculateStats();
 });
 
@@ -270,7 +273,87 @@ const handleLogout = () => {
 
 const refreshData = async () => {
   await loadAllData();
+  await fetchErrorLogs();
   calculateStats();
+};
+
+// Error Logs management
+const fetchErrorLogs = async () => {
+  isLoadingLogs.value = true;
+  try {
+    let url = 'http://localhost:8080/api/admin/logs';
+    const params = new URLSearchParams();
+    
+    if (logFilters.value.level) {
+      params.append('level', logFilters.value.level);
+    }
+    if (logFilters.value.service) {
+      params.append('service', logFilters.value.service);
+    }
+    if (logFilters.value.hours) {
+      params.append('hours', logFilters.value.hours.toString());
+    }
+    
+    if (params.toString()) {
+      url += '?' + params.toString();
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      const logs = await response.json();
+      // Convert timestamp strings to Date objects
+      errorLogs.value = logs.map((log: any) => {
+        // Handle timestamp conversion - MongoDB returns ISO string or LocalDateTime object
+        let timestamp = log.timestamp;
+        if (typeof timestamp === 'string') {
+          timestamp = new Date(timestamp);
+        } else if (timestamp && typeof timestamp === 'object' && timestamp.year) {
+          // Handle LocalDateTime object from Spring Boot
+          timestamp = new Date(
+            timestamp.year,
+            timestamp.monthValue - 1,
+            timestamp.dayOfMonth,
+            timestamp.hour || 0,
+            timestamp.minute || 0,
+            timestamp.second || 0
+          );
+        } else if (!timestamp) {
+          timestamp = new Date();
+        }
+        return {
+          ...log,
+          timestamp: timestamp
+        };
+      });
+    } else {
+      console.error('Failed to fetch error logs');
+      errorLogs.value = [];
+    }
+  } catch (error) {
+    console.error('Error fetching error logs:', error);
+    errorLogs.value = [];
+  } finally {
+    isLoadingLogs.value = false;
+  }
+};
+
+const applyLogFilters = () => {
+  fetchErrorLogs();
+};
+
+const clearLogFilters = () => {
+  logFilters.value = {
+    level: '',
+    service: '',
+    hours: 24
+  };
+  fetchErrorLogs();
 };
 
 // Admin Communal management
@@ -866,9 +949,87 @@ const getCityName = (villeId: string) => {
 
         <!-- Error Reports Section -->
         <section v-if="activeSection === 'errors'" class="space-y-6">
-          <h2 class="text-3xl font-bold text-gray-900">Error Reports & Logs</h2>
+          <div class="flex items-center justify-between">
+            <h2 class="text-3xl font-bold text-gray-900">Error Reports & Logs</h2>
+            <button
+              @click="fetchErrorLogs"
+              class="flex items-center gap-2 px-4 py-2 bg-[#7A1F1F] text-white rounded-lg hover:bg-[#6A1A1A] transition-colors"
+            >
+              <RefreshCw :size="18" />
+              <span>Refresh</span>
+            </button>
+          </div>
 
-          <div class="bg-white rounded-3xl shadow-md overflow-hidden">
+          <!-- Filters -->
+          <div class="bg-white rounded-3xl p-6 shadow-md">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Level</label>
+                <select
+                  v-model="logFilters.level"
+                  class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+                >
+                  <option value="">All Levels</option>
+                  <option value="ERROR">ERROR</option>
+                  <option value="WARN">WARN</option>
+                  <option value="INFO">INFO</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Service</label>
+                <input
+                  v-model="logFilters.service"
+                  type="text"
+                  placeholder="Filter by service..."
+                  class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Time Range (Hours)</label>
+                <select
+                  v-model.number="logFilters.hours"
+                  class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#7A1F1F] focus:outline-none"
+                >
+                  <option :value="1">Last Hour</option>
+                  <option :value="24">Last 24 Hours</option>
+                  <option :value="168">Last Week</option>
+                  <option :value="720">Last Month</option>
+                  <option :value="0">All Time</option>
+                </select>
+              </div>
+              <div class="flex items-end gap-2">
+                <button
+                  @click="applyLogFilters"
+                  class="flex-1 px-4 py-2 bg-[#7A1F1F] text-white rounded-xl hover:bg-[#6A1A1A] transition-colors"
+                >
+                  Apply
+                </button>
+                <button
+                  @click="clearLogFilters"
+                  class="px-4 py-2 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div v-if="isLoadingLogs" class="bg-white rounded-3xl p-6 shadow-md text-center">
+            <RefreshCw :size="32" class="mx-auto text-[#7A1F1F] animate-spin mb-2" />
+            <p class="text-gray-600">Loading error logs...</p>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else-if="errorLogs.length === 0" class="bg-white rounded-3xl p-6 shadow-md text-center">
+            <AlertTriangle :size="48" class="mx-auto text-gray-400 mb-4" />
+            <p class="text-gray-600">No error logs found.</p>
+            <p class="text-sm text-gray-500 mt-2">Errors will appear here as they occur.</p>
+          </div>
+
+          <!-- Logs Table -->
+          <div v-else class="bg-white rounded-3xl shadow-md overflow-hidden">
             <div class="overflow-x-auto">
               <table class="w-full">
                 <thead class="bg-gray-50">
@@ -877,24 +1038,44 @@ const getCityName = (villeId: string) => {
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                   <tr v-for="log in errorLogs" :key="log.id" class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {{ log.timestamp.toLocaleString() }}
+                      {{ log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="px-2 py-1 text-xs rounded-full" :class="{
+                      <span class="px-2 py-1 text-xs rounded-full font-medium" :class="{
                         'bg-red-100 text-red-800': log.level === 'ERROR',
                         'bg-yellow-100 text-yellow-800': log.level === 'WARN',
-                        'bg-blue-100 text-blue-800': log.level === 'INFO'
+                        'bg-blue-100 text-blue-800': log.level === 'INFO',
+                        'bg-gray-100 text-gray-800': !log.level || (log.level !== 'ERROR' && log.level !== 'WARN' && log.level !== 'INFO')
                       }">
-                        {{ log.level }}
+                        {{ log.level || 'UNKNOWN' }}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ log.service }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">{{ log.message }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <span class="font-medium">{{ log.service || 'Unknown' }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 max-w-md">
+                      <div class="truncate" :title="log.message">
+                        {{ log.message || 'No message' }}
+                      </div>
+                      <div v-if="log.exception" class="text-xs text-gray-500 mt-1">
+                        {{ log.exception }}
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div v-if="log.requestMethod && log.requestPath">
+                        <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700 font-mono">
+                          {{ log.requestMethod }}
+                        </span>
+                        <span class="text-xs text-gray-500 ml-2">{{ log.requestPath }}</span>
+                      </div>
+                      <span v-else class="text-gray-400">-</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
