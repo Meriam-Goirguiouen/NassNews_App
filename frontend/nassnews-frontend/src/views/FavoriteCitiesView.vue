@@ -21,15 +21,36 @@ onMounted(async () => {
   // Load cities from database
   await cityStore.fetchCities();
   
-  // Load favorites from localStorage
+  // Load favorites from API if user is authenticated
+  if (authStore.isAuthenticated && authStore.currentUser?.id) {
+    try {
+      const userId = String(authStore.currentUser.id);
+      const favorites = await cityStore.getFavoriteCities(userId);
+      // Filter out null values and "null" strings
+      favoriteCityIds.value = favorites.filter(id => id && id !== 'null' && id.trim() !== '');
+      console.log('Loaded favorite city IDs from API:', favoriteCityIds.value);
+    } catch (e) {
+      console.error('Error loading favorite cities from API:', e);
+      // Fallback to localStorage
+      loadFromLocalStorage();
+    }
+  } else {
+    // Fallback to localStorage for non-authenticated users
+    loadFromLocalStorage();
+  }
+});
+
+function loadFromLocalStorage() {
   const saved = localStorage.getItem('favoriteCities');
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      // Ensure it's an array and contains only strings
+      // Ensure it's an array and contains only strings, filter out null values
       if (Array.isArray(parsed)) {
-        favoriteCityIds.value = parsed.map(id => String(id));
-        console.log('Loaded favorite city IDs:', favoriteCityIds.value);
+        favoriteCityIds.value = parsed
+          .map(id => String(id))
+          .filter(id => id && id !== 'null' && id.trim() !== '');
+        console.log('Loaded favorite city IDs from localStorage:', favoriteCityIds.value);
       } else {
         console.warn('Invalid favorite cities format, resetting');
         favoriteCityIds.value = [];
@@ -41,7 +62,7 @@ onMounted(async () => {
   } else {
     favoriteCityIds.value = [];
   }
-});
+}
 
 // Filter cities to show only favorites
 const favoriteCities = computed(() => {
@@ -106,7 +127,7 @@ const getCityId = (city: any): string => {
   return String(id);
 };
 
-const toggleFavorite = (cityId: string | number | undefined) => {
+const toggleFavorite = async (cityId: string | number | undefined) => {
   // Check if cityId is valid
   if (!cityId) {
     console.error('City ID is undefined or null. City object:', cityId);
@@ -122,59 +143,106 @@ const toggleFavorite = (cityId: string | number | undefined) => {
     return;
   }
   
-  console.log('Toggling favorite for city ID:', idStr);
-  console.log('Current favorites before:', [...favoriteCityIds.value]);
-  
-  // Verify this city exists
-  const cityExists = cityStore.cities.some(c => String(c.id) === idStr);
-  if (!cityExists) {
-    console.error('City ID not found in cities list:', idStr);
-    console.log('Available city IDs:', cityStore.cities.map(c => String(c.id)));
+  // Check if user is authenticated
+  if (!authStore.isAuthenticated || !authStore.currentUser?.id) {
+    console.warn('User not authenticated, using localStorage only');
+    // Fallback to localStorage for non-authenticated users
+    const currentFavorites = [...favoriteCityIds.value];
+    const index = currentFavorites.indexOf(idStr);
+    
+    if (index > -1) {
+      currentFavorites.splice(index, 1);
+    } else {
+      currentFavorites.push(idStr);
+    }
+    
+    favoriteCityIds.value = currentFavorites.filter(id => id && id !== 'null' && id.trim() !== '');
+    localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
     return;
   }
   
-  // Create a new array to ensure reactivity
-  const currentFavorites = [...favoriteCityIds.value];
-  const index = currentFavorites.indexOf(idStr);
+  const userId = String(authStore.currentUser.id);
+  const isCurrentlyFavorite = favoriteCityIds.value.includes(idStr);
   
-  if (index > -1) {
-    // Remove from favorites
-    currentFavorites.splice(index, 1);
-    console.log('Removed city from favorites');
+  // Optimistic UI update
+  const previousFavorites = [...favoriteCityIds.value];
+  
+  if (isCurrentlyFavorite) {
+    // Optimistically remove
+    favoriteCityIds.value = previousFavorites.filter(id => id !== idStr);
   } else {
-    // Add to favorites - only add this one city
-    currentFavorites.push(idStr);
-    console.log('Added city to favorites');
+    // Optimistically add
+    favoriteCityIds.value = [...previousFavorites, idStr].filter(id => id && id !== 'null' && id.trim() !== '');
   }
   
-  // Update the ref
-  favoriteCityIds.value = currentFavorites;
-  
-  console.log('Current favorites after:', [...favoriteCityIds.value]);
-  console.log('Favorites count:', favoriteCityIds.value.length);
-  
-  // Save to localStorage
-  localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
+  try {
+    let success = false;
+    if (isCurrentlyFavorite) {
+      success = await cityStore.removeFavoriteCity(userId, idStr);
+    } else {
+      success = await cityStore.addFavoriteCity(userId, idStr);
+    }
+    
+    if (!success) {
+      // Revert optimistic update on failure
+      favoriteCityIds.value = previousFavorites;
+      console.error('Failed to update favorite city in database');
+    } else {
+      // Sync with backend to get the cleaned list (without nulls)
+      const updatedFavorites = await cityStore.getFavoriteCities(userId);
+      favoriteCityIds.value = updatedFavorites.filter(id => id && id !== 'null' && id.trim() !== '');
+      // Also update localStorage as backup
+      localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
+    }
+  } catch (error) {
+    // Revert optimistic update on error
+    favoriteCityIds.value = previousFavorites;
+    console.error('Error toggling favorite city:', error);
+  }
 };
 
-const removeFavorite = (cityId: string, event?: Event) => {
+const removeFavorite = async (cityId: string, event?: Event) => {
   if (event) {
     event.stopPropagation();
     event.preventDefault();
   }
   
   const idStr = String(cityId);
-  console.log('Removing favorite for city ID:', idStr);
-  console.log('Current favorites before:', [...favoriteCityIds.value]);
   
-  const index = favoriteCityIds.value.indexOf(idStr);
-  if (index > -1) {
-    favoriteCityIds.value.splice(index, 1);
-    console.log('Removed city from favorites');
-    console.log('Current favorites after:', [...favoriteCityIds.value]);
-    localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
-  } else {
-    console.warn('City ID not found in favorites:', idStr);
+  // Check if user is authenticated
+  if (!authStore.isAuthenticated || !authStore.currentUser?.id) {
+    // Fallback to localStorage for non-authenticated users
+    const index = favoriteCityIds.value.indexOf(idStr);
+    if (index > -1) {
+      favoriteCityIds.value.splice(index, 1);
+      localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
+    }
+    return;
+  }
+  
+  const userId = String(authStore.currentUser.id);
+  
+  // Optimistic UI update
+  const previousFavorites = [...favoriteCityIds.value];
+  favoriteCityIds.value = previousFavorites.filter(id => id !== idStr);
+  
+  try {
+    const success = await cityStore.removeFavoriteCity(userId, idStr);
+    
+    if (!success) {
+      // Revert optimistic update on failure
+      favoriteCityIds.value = previousFavorites;
+      console.error('Failed to remove favorite city from database');
+    } else {
+      // Sync with backend to get the cleaned list
+      const updatedFavorites = await cityStore.getFavoriteCities(userId);
+      favoriteCityIds.value = updatedFavorites.filter(id => id && id !== 'null' && id.trim() !== '');
+      localStorage.setItem('favoriteCities', JSON.stringify(favoriteCityIds.value));
+    }
+  } catch (error) {
+    // Revert optimistic update on error
+    favoriteCityIds.value = previousFavorites;
+    console.error('Error removing favorite city:', error);
   }
 };
 

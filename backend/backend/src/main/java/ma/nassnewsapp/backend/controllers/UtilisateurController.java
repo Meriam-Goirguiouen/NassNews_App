@@ -225,6 +225,65 @@ public class UtilisateurController {
         return ResponseEntity.ok(new java.util.ArrayList<>());
     }
 
+    // --- Favorite Cities Endpoints ---
+    @PostMapping("/{userId}/favorites/cities/{cityId}")
+    public ResponseEntity<Map<String, Object>> addFavoriteCity(
+            @PathVariable String userId,
+            @PathVariable String cityId) {
+        try {
+            boolean success = utilisateurService.addFavoriteCity(userId, cityId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "City added to favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/{userId}/favorites/cities/{cityId}")
+    public ResponseEntity<Map<String, Object>> removeFavoriteCity(
+            @PathVariable String userId,
+            @PathVariable String cityId) {
+        try {
+            boolean success = utilisateurService.removeFavoriteCity(userId, cityId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "City removed from favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{userId}/favorites/cities")
+    public ResponseEntity<List<String>> getFavoriteCities(@PathVariable String userId) {
+        List<String> favorites = utilisateurService.getFavoriteCities(userId);
+        if (favorites != null) {
+            return ResponseEntity.ok(favorites);
+        }
+        // Return empty list if user not found (better than 404 for UX)
+        return ResponseEntity.ok(new java.util.ArrayList<>());
+    }
+
     // --- Classes internes pour les requêtes ---
     public static class SignupRequest {
         private String nom;

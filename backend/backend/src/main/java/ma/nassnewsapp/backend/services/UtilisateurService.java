@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UtilisateurService {
@@ -82,19 +83,36 @@ public class UtilisateurService {
             }
         }
 
-        return utilisateurRepository.findById(id).map(existingUser -> {
-            existingUser.setNom(utilisateurDetails.getNom());
-            existingUser.setEmail(utilisateurDetails.getEmail());
-            existingUser.setRole(utilisateurDetails.getRole());
-
-            if (utilisateurDetails.getMotDePasse() != null && !utilisateurDetails.getMotDePasse().isEmpty()) {
-                existingUser.setMotDePasse(utilisateurDetails.getMotDePasse());
-            }
-
-            existingUser.setVillesFavorites(utilisateurDetails.getVillesFavorites());
-
-            return utilisateurRepository.save(existingUser);
-        });
+        // Check if user exists
+        if (!utilisateurRepository.existsById(id)) {
+            return Optional.empty();
+        }
+        
+        // Build update object with all fields that need to be updated
+        Update update = new Update();
+        
+        if (utilisateurDetails.getNom() != null) {
+            update.set("nom", utilisateurDetails.getNom());
+        }
+        if (utilisateurDetails.getEmail() != null) {
+            update.set("email", utilisateurDetails.getEmail());
+        }
+        if (utilisateurDetails.getRole() != null) {
+            update.set("role", utilisateurDetails.getRole());
+        }
+        if (utilisateurDetails.getMotDePasse() != null && !utilisateurDetails.getMotDePasse().isEmpty()) {
+            update.set("motDePasse", utilisateurDetails.getMotDePasse());
+        }
+        if (utilisateurDetails.getVillesFavorites() != null) {
+            update.set("villesFavorites", utilisateurDetails.getVillesFavorites());
+        }
+        
+        // Use MongoTemplate to explicitly update the existing document
+        Query query = new Query(Criteria.where("_id").is(id));
+        mongoTemplate.updateFirst(query, update, Utilisateur.class);
+        
+        // Fetch and return the updated document
+        return utilisateurRepository.findById(id);
     }
 
     // ----------------------------------------------------------------------
@@ -340,5 +358,88 @@ public class UtilisateurService {
         
         Utilisateur user = userOpt.get();
         return user.getEvenementsFavorites() != null ? user.getEvenementsFavorites() : new java.util.ArrayList<>();
+    }
+
+    // ----------------------------------------------------------------------
+    // FAVORITE CITIES OPERATIONS
+    // ----------------------------------------------------------------------
+    public boolean addFavoriteCity(String userId, String cityId) {
+        logger.info("Adding favorite city - User ID: {}, City ID: {}", userId, cityId);
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when adding favorite city", userId);
+            return false;
+        }
+        
+        Utilisateur user = userOpt.get();
+        // Create a new list to ensure MongoDB detects the change
+        List<String> favoritesList = user.getVillesFavorites() != null 
+            ? new java.util.ArrayList<>(user.getVillesFavorites()) 
+            : new java.util.ArrayList<>();
+        
+        // Filter out null values
+        favoritesList.removeIf(id -> id == null || id.equals("null") || id.trim().isEmpty());
+        
+        if (!favoritesList.contains(cityId)) {
+            favoritesList.add(cityId);
+            logger.debug("Added city {} to list. List now contains: {}", cityId, favoritesList);
+            
+            // Use MongoTemplate to explicitly update the existing document
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("villesFavorites", favoritesList);
+            
+            mongoTemplate.findAndModify(query, update, Utilisateur.class);
+            logger.info("User updated. City favorites: {}", favoritesList);
+        } else {
+            logger.debug("City {} already in favorites for user {}", cityId, userId);
+        }
+        
+        return true;
+    }
+
+    public boolean removeFavoriteCity(String userId, String cityId) {
+        logger.info("Removing favorite city - User ID: {}, City ID: {}", userId, cityId);
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when removing favorite city", userId);
+            return false;
+        }
+        
+        Utilisateur user = userOpt.get();
+        if (user.getVillesFavorites() != null && user.getVillesFavorites().contains(cityId)) {
+            // Create a new list without the cityId
+            List<String> favoritesList = new java.util.ArrayList<>(user.getVillesFavorites());
+            favoritesList.remove(cityId);
+            
+            // Filter out null values
+            favoritesList.removeIf(id -> id == null || id.equals("null") || id.trim().isEmpty());
+            
+            // Use MongoTemplate to explicitly update the existing document
+            Query query = new Query(Criteria.where("_id").is(userId));
+            Update update = new Update().set("villesFavorites", favoritesList);
+            
+            mongoTemplate.findAndModify(query, update, Utilisateur.class);
+            logger.info("Successfully removed city {} from favorites for user {}", cityId, userId);
+        }
+        
+        return true;
+    }
+
+    public List<String> getFavoriteCities(String userId) {
+        Optional<Utilisateur> userOpt = utilisateurRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            logger.warn("User not found with ID: {} when getting favorite cities", userId);
+            return null;
+        }
+        
+        Utilisateur user = userOpt.get();
+        List<String> favorites = user.getVillesFavorites() != null ? user.getVillesFavorites() : new java.util.ArrayList<>();
+        
+        // Filter out null values and "null" strings
+        favorites = favorites.stream()
+            .filter(id -> id != null && !id.equals("null") && !id.trim().isEmpty())
+            .collect(Collectors.toList());
+        
+        return favorites;
     }
 }
