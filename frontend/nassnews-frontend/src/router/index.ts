@@ -74,7 +74,7 @@ router.beforeEach((to, from, next) => {
     return next('/login');
   }
 
-  if (to.path === '/admin/system' && role !== 'ADMIN_SYSTEME') {
+  if (to.path === '/admin/system' && role !== 'ADMIN_SYSTEM') {
     return next('/login');
   }
 
