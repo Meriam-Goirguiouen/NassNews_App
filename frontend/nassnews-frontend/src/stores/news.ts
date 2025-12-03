@@ -99,6 +99,111 @@ export const useNewsStore = defineStore('news', () => {
     );
   }
 
+  // Favorite news operations
+  async function addFavoriteNews(userId: string, newsId: string | number): Promise<boolean> {
+    try {
+      console.log('Adding favorite news - User ID:', userId, 'News ID:', newsId);
+      const response = await fetch(`http://localhost:8080/api/utilisateurs/${userId}/favorites/news/${newsId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          const errorData = await response.json();
+          errorText = errorData.message || JSON.stringify(errorData);
+        } catch {
+          errorText = await response.text();
+        }
+        console.error('Failed to add favorite news. Status:', response.status, 'Error:', errorText);
+        
+        // If 400 Bad Request, it means user not found or invalid request
+        if (response.status === 400) {
+          console.error('User might not exist or request is invalid');
+        }
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('Add favorite response:', data);
+      
+      // Handle different response formats
+      if (data.success === true || data.success === 'true') {
+        return true;
+      }
+      // If response is OK but no success field, assume it worked
+      if (response.status === 200) {
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('Error adding favorite news:', err);
+      return false;
+    }
+  }
+
+  async function removeFavoriteNews(userId: string, newsId: string | number): Promise<boolean> {
+    try {
+      const response = await fetch(`http://localhost:8080/api/utilisateurs/${userId}/favorites/news/${newsId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to remove favorite news. Status:', response.status, 'Error:', errorText);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('Remove favorite response:', data);
+      
+      // Handle different response formats
+      if (data.success === true || data.success === 'true') {
+        return true;
+      }
+      // If response is OK but no success field, assume it worked
+      if (response.status === 200) {
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('Error removing favorite news:', err);
+      return false;
+    }
+  }
+
+  async function getFavoriteNews(userId: string): Promise<string[]> {
+    try {
+      const response = await fetch(`http://localhost:8080/api/utilisateurs/${userId}/favorites/news`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        // If 404, return empty array (user might not have favorites yet)
+        if (response.status === 404) {
+          console.log('User has no favorites yet (404), returning empty array');
+          return [];
+        }
+        throw new Error(`Failed to fetch favorite news: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err: any) {
+      console.error('Error fetching favorite news:', err);
+      return [];
+    }
+  }
+
   return {
     newsList,
     loading,
@@ -106,6 +211,9 @@ export const useNewsStore = defineStore('news', () => {
     fetchByCityId,
     fetchAllNews,
     getTodaysNews,
+    addFavoriteNews,
+    removeFavoriteNews,
+    getFavoriteNews,
   };
 });
 
