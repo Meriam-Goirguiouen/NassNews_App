@@ -4,7 +4,7 @@
       <div class="text-center mb-14">
         <button class="px-5 py-2 rounded-full border border-white text-white font-medium mb-8 hover:bg-white/10 transition">Reach Out To Us</button>
         <h2 class="text-4xl md:text-5xl font-bold mb-4 text-white">We'd Love to Hear From You.</h2>
-        <p class="text-lg text-white/90 mb-2">Or just reach out manually to <a href="mailto:hello@slothoi.com" class="underline hover:text-[#D4AF37] text-[#D4AF37]">hello@slothui.com</a>.</p>
+        <p class="text-lg text-white/90 mb-2">Or just reach out manually to <a href="mailto:info@nassnews.com" class="underline hover:text-[#D4AF37] text-[#D4AF37]">info@nassnews.com</a>.</p>
       </div>
       <div class="grid md:grid-cols-3 gap-10 text-white">
         <!-- Email -->
@@ -15,7 +15,7 @@
           </span>
           <div class="font-bold text-lg mb-1">Email Support</div>
           <div class="text-white/80 text-base mb-2">Our team can respond in real time.</div>
-          <a class="text-[#D4AF37] hover:underline" href="mailto:hello@nassnews.com">hello@slothui.com</a>
+          <a class="text-[#D4AF37] hover:underline" href="mailto:info@nassnews.com">info@nassnews.com</a>
         </div>
         <!-- Office -->
         <div class="bg-transparent flex flex-col items-center text-center">
@@ -25,8 +25,8 @@
           </span>
           <div class="font-bold text-lg mb-1">Visit Our Office</div>
           <div class="text-white/80 text-base mb-2">Visit our location in real life.</div>
-          <div class="text-[#D4AF37]">221b Elementary Avenue, NY</div>
-        </div>
+          <div class="text-[#D4AF37]">221b Elementary Avenue, MA</div>
+        </div>  
         <!-- Call -->
         <div class="bg-transparent flex flex-col items-center text-center">
           <span class="mb-4 flex items-center justify-center h-14 w-14 rounded-full bg-[#D4AF37]/20">
