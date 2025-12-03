@@ -103,6 +103,224 @@ public class UtilisateurController {
     ));
     }
 
+    // --- Favorite News Endpoints ---
+    @PostMapping("/{userId}/favorites/news/{newsId}")
+    public ResponseEntity<Map<String, Object>> addFavoriteNews(
+            @PathVariable String userId,
+            @PathVariable String newsId) {
+        try {
+            boolean success = utilisateurService.addFavoriteNews(userId, newsId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "News added to favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/{userId}/favorites/news/{newsId}")
+    public ResponseEntity<Map<String, Object>> removeFavoriteNews(
+            @PathVariable String userId,
+            @PathVariable String newsId) {
+        try {
+            boolean success = utilisateurService.removeFavoriteNews(userId, newsId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "News removed from favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{userId}/favorites/news")
+    public ResponseEntity<List<String>> getFavoriteNews(@PathVariable String userId) {
+        List<String> favorites = utilisateurService.getFavoriteNews(userId);
+        if (favorites != null) {
+            return ResponseEntity.ok(favorites);
+        }
+        // Return empty list if user not found (better than 404 for UX)
+        return ResponseEntity.ok(new java.util.ArrayList<>());
+    }
+
+    // --- Favorite Events Endpoints ---
+    @PostMapping("/{userId}/favorites/events/{eventId}")
+    public ResponseEntity<Map<String, Object>> addFavoriteEvent(
+            @PathVariable String userId,
+            @PathVariable String eventId) {
+        try {
+            boolean success = utilisateurService.addFavoriteEvent(userId, eventId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "Event added to favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/{userId}/favorites/events/{eventId}")
+    public ResponseEntity<Map<String, Object>> removeFavoriteEvent(
+            @PathVariable String userId,
+            @PathVariable String eventId) {
+        try {
+            boolean success = utilisateurService.removeFavoriteEvent(userId, eventId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "Event removed from favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                // User not found - return 400 Bad Request instead of 404
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{userId}/favorites/events")
+    public ResponseEntity<List<String>> getFavoriteEvents(@PathVariable String userId) {
+        List<String> favorites = utilisateurService.getFavoriteEvents(userId);
+        if (favorites != null) {
+            return ResponseEntity.ok(favorites);
+        }
+        // Return empty list if user not found (better than 404 for UX)
+        return ResponseEntity.ok(new java.util.ArrayList<>());
+    }
+
+    // --- Favorite Cities Endpoints ---
+    @PostMapping("/{userId}/favorites/cities/{cityId}")
+    public ResponseEntity<Map<String, Object>> addFavoriteCity(
+            @PathVariable String userId,
+            @PathVariable String cityId) {
+        try {
+            boolean success = utilisateurService.addFavoriteCity(userId, cityId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "City added to favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @DeleteMapping("/{userId}/favorites/cities/{cityId}")
+    public ResponseEntity<Map<String, Object>> removeFavoriteCity(
+            @PathVariable String userId,
+            @PathVariable String cityId) {
+        try {
+            boolean success = utilisateurService.removeFavoriteCity(userId, cityId);
+            Map<String, Object> response = new HashMap<>();
+            if (success) {
+                response.put("success", true);
+                response.put("message", "City removed from favorites");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("success", false);
+                response.put("message", "User not found");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{userId}/favorites/cities")
+    public ResponseEntity<List<String>> getFavoriteCities(@PathVariable String userId) {
+        List<String> favorites = utilisateurService.getFavoriteCities(userId);
+        if (favorites != null) {
+            return ResponseEntity.ok(favorites);
+        }
+        // Return empty list if user not found (better than 404 for UX)
+        return ResponseEntity.ok(new java.util.ArrayList<>());
+    }
+
+    // --- Admin Communal Endpoints ---
+    @PostMapping("/admin-communal")
+    public ResponseEntity<?> createAdminCommunal(@RequestBody CreateAdminCommunalRequest request) {
+        try {
+            Utilisateur admin = utilisateurService.createAdminCommunal(
+                request.getNom(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getVilleId()
+            );
+            return ResponseEntity.ok(admin);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Error creating admin communal: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    @GetMapping("/admin-communal")
+    public ResponseEntity<List<Utilisateur>> getAllAdminCommunaux() {
+        List<Utilisateur> admins = utilisateurService.getAllAdminCommunaux();
+        return ResponseEntity.ok(admins);
+    }
+
+    @GetMapping("/admin-communal/city/{villeId}")
+    public ResponseEntity<?> getAdminCommunalByCity(@PathVariable String villeId) {
+        Optional<Utilisateur> admin = utilisateurService.getAdminCommunalByCity(villeId);
+        if (admin.isPresent()) {
+            return ResponseEntity.ok(admin.get());
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     // --- Classes internes pour les requêtes ---
     public static class SignupRequest {
         private String nom;
@@ -128,5 +346,22 @@ public class UtilisateurController {
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+    }
+
+    public static class CreateAdminCommunalRequest {
+        private String nom;
+        private String email;
+        private String password;
+        private String villeId;
+        
+        // getters & setters
+        public String getNom() { return nom; }
+        public void setNom(String nom) { this.nom = nom; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+        public String getVilleId() { return villeId; }
+        public void setVilleId(String villeId) { this.villeId = villeId; }
     }
 }

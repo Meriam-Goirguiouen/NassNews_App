@@ -35,12 +35,13 @@ export const useAuthStore = defineStore('utilisateurs', () => {
       const data = await response.json();
 
       // Adapter la structure du user
-      currentUser.value = data.user || {
-        id: data.id,
-        username: data.username,
-        email: data.email,
-        role: data.role || 'USER',
-        favoriteCities: data.favoriteCities || [],
+      const userData = data.user || data;
+      currentUser.value = {
+        id: userData.idUtilisateur || userData.id || userData._id,
+        username: userData.nom || userData.username,
+        email: userData.email,
+        role: userData.role || 'USER',
+        favoriteCities: userData.villesFavorites || userData.favoriteCities || [],
       };
 
       token.value = data.token || data.accessToken || 'mock-token';

@@ -148,6 +148,76 @@ export const useCityStore = defineStore('city', () => {
     }
   }
 
+  async function addFavoriteCity(userId: string, cityId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`http://localhost:8080/api/utilisateurs/${userId}/favorites/cities/${cityId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to add favorite city' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success === true;
+    } catch (err: any) {
+      console.error('Error adding favorite city:', err);
+      return false;
+    }
+  }
+
+  async function removeFavoriteCity(userId: string, cityId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`http://localhost:8080/api/utilisateurs/${userId}/favorites/cities/${cityId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to remove favorite city' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success === true;
+    } catch (err: any) {
+      console.error('Error removing favorite city:', err);
+      return false;
+    }
+  }
+
+  async function getFavoriteCities(userId: string): Promise<string[]> {
+    try {
+      const response = await fetch(`http://localhost:8080/api/utilisateurs/${userId}/favorites/cities`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const favorites = await response.json();
+      // Filter out null values and "null" strings
+      return Array.isArray(favorites) 
+        ? favorites
+            .map(id => String(id))
+            .filter(id => id && id !== 'null' && id.trim() !== '')
+        : [];
+    } catch (err: any) {
+      console.error('Error fetching favorite cities:', err);
+      return [];
+    }
+  }
+
   return {
     cities,
     currentCityId,
@@ -158,5 +228,8 @@ export const useCityStore = defineStore('city', () => {
     setCurrentCity,
     loadSavedCity,
     detectCityFromLocation,
+    addFavoriteCity,
+    removeFavoriteCity,
+    getFavoriteCities,
   };
 });
