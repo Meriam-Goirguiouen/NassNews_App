@@ -5,6 +5,9 @@ import ma.nassnewsapp.backend.services.ActualiteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+// --- MODIFICATION 1 : AJOUT DE L'IMPORT ---
+import org.springframework.web.bind.annotation.CrossOrigin;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -12,13 +15,14 @@ import java.util.Optional;
  * Ce contrôleur expose les points de terminaison (endpoints) de l'API REST
  * pour gérer les actualités.
  */
-@RestController // Annotation essentielle qui combine @Controller et @ResponseBody. Indique que les retours des méthodes seront des données (JSON) et non des vues.
-@RequestMapping("/api/actualites") // Définit l'URL de base pour toutes les méthodes de ce contrôleur. Ex: http://localhost:8080/api/actualites
+@RestController 
+@RequestMapping("/api/actualites")
+// --- MODIFICATION 2 : AJOUT DE L'ANNOTATION ---
+@CrossOrigin(origins = "http://localhost:5173") // Autorise les requêtes depuis votre frontend Vue.js
 public class ActualiteController {
 
     private final ActualiteService actualiteService;
 
-    // Spring va automatiquement injecter votre ActualiteService ici
     public ActualiteController(ActualiteService actualiteService) {
         this.actualiteService = actualiteService;
     }
@@ -37,20 +41,16 @@ public class ActualiteController {
             @RequestParam(required = false) String categorie) {
 
         if (villeId != null && !villeId.isEmpty()) {
-            // Si un villeId est fourni, on filtre par ville
             List<Actualite> actualites = actualiteService.getActualitesByVille(villeId);
             return ResponseEntity.ok(actualites);
         }
 
         if (categorie != null && !categorie.isEmpty()) {
-            // Si une catégorie est fournie, on filtre par catégorie
             List<Actualite> actualites = actualiteService.getActualitesByCategorie(categorie);
             return ResponseEntity.ok(actualites);
         }
 
-        // Si aucun filtre n'est fourni, on pourrait retourner toutes les actualités
-        // (Pour l'instant, on retourne une liste vide)
-        List<Actualite> toutesLesActualites = actualiteService.getAllActualites(); // Vous devrez créer cette méthode dans le service et le repository
+        List<Actualite> toutesLesActualites = actualiteService.getAllActualites();
         return ResponseEntity.ok(toutesLesActualites);
     }
 
@@ -64,10 +64,7 @@ public class ActualiteController {
     @GetMapping("/{id}")
     public ResponseEntity<Actualite> getActualiteById(@PathVariable String id) {
         Optional<Actualite> actualite = actualiteService.getActualiteById(id);
-
-        // On utilise une expression lambda pour gérer les deux cas :
-        // - Si l'actualité est présente (Optional.isPresent()), on retourne ResponseEntity.ok(actualite).
-        // - Sinon, on retourne ResponseEntity.notFound().build().
+        
         return actualite.map(ResponseEntity::ok)
                         .orElse(ResponseEntity.notFound().build());
     }
@@ -81,6 +78,7 @@ public class ActualiteController {
      */
     @PostMapping
     public ResponseEntity<Actualite> createActualite(@RequestBody Actualite actualite) {
+        // Note: Vous devrez aussi créer la méthode 'createActualite' dans votre ActualiteService
         try {
             Actualite createdActualite = actualiteService.createActualite(actualite);
             return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(createdActualite);
