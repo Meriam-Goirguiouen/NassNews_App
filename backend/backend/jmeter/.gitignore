@@ -1,0 +1,15 @@
+# JMeter Test Results
+results/
+reports/
+*.jtl
+*.log
+
+# JMeter temporary files
+*.tmp
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
