@@ -21,5 +21,10 @@ public interface ActualiteRepository extends MongoRepository<Actualite, String> 
 
     //exemple, pour trouver des actualités par catégorie :
     List<Actualite> findByCategorie(String categorie);
+    
+    // --- LIGNE À AJOUTER ---
+    // Trouve toutes les actualités dont le champ "titre" correspond exactement
+    // à la valeur passée en paramètre. Utilisé pour éviter les doublons.
+    List<Actualite> findByTitre(String titre);
 
 }
