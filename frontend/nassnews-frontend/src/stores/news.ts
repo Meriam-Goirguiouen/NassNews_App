@@ -27,7 +27,7 @@ export const useNewsStore = defineStore('news', () => {
       cityId: actualite.villeId,
       imageUrl: actualite.imageUrl,
       author: actualite.source,
-      category: actualite.categorie,
+      category: actualite.categorie || 'Général',
     };
   }
 

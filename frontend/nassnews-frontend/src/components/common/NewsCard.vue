@@ -169,19 +169,24 @@ const formattedDate = computed(() => {
   const date = new Date(props.news.datePublication);
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 });
+
+const displayCategory = computed(() => {
+  return props.news.category || 'Général';
+});
+
+const defaultImageUrl = '/general-news-placeholder.svg';
 </script>
 
 <template>
   <article class="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
     <div class="relative h-48 overflow-hidden bg-gray-200">
       <img
-        v-if="news.imageUrl"
-        :src="news.imageUrl"
+        :src="news.imageUrl || defaultImageUrl"
         :alt="news.title"
         class="w-full h-full object-cover"
       />
-      <div v-if="news.category" class="absolute top-4 right-4 bg-[#7A1F1F] text-white px-3 py-1 rounded-full text-xs font-semibold">
-        {{ news.category }}
+      <div class="absolute top-4 right-4 bg-[#7A1F1F] text-white px-3 py-1 rounded-full text-xs font-semibold">
+        {{ displayCategory }}
       </div>
       <button
         v-if="showFavoriteButton"

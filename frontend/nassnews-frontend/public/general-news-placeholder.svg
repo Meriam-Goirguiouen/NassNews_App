@@ -1,0 +1,136 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7A1F1F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9B2D2D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#grad)"/>
+  
+  <!-- Newspaper icons -->
+  <g transform="translate(150, 120)" opacity="0.6">
+    <rect x="-20" y="-15" width="40" height="30" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="-20" y1="-5" x2="20" y2="-5" stroke="white" stroke-width="1.5"/>
+    <line x1="-20" y1="5" x2="20" y2="5" stroke="white" stroke-width="1.5"/>
+    <line x1="0" y1="-15" x2="0" y2="15" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <g transform="translate(650, 180)" opacity="0.5">
+    <rect x="-18" y="-14" width="36" height="28" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="-18" y1="-4" x2="18" y2="-4" stroke="white" stroke-width="1.5"/>
+    <line x1="-18" y1="6" x2="18" y2="6" stroke="white" stroke-width="1.5"/>
+    <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Camera icons -->
+  <g transform="translate(250, 450)" opacity="0.6">
+    <rect x="-15" y="-12" width="30" height="24" rx="2" fill="none" stroke="white" stroke-width="2"/>
+    <circle cx="0" cy="0" r="6" fill="none" stroke="white" stroke-width="2"/>
+    <rect x="-12" y="8" width="24" height="4" rx="1" fill="white" opacity="0.7"/>
+  </g>
+  
+  <g transform="translate(700, 420)" opacity="0.5">
+    <rect x="-14" y="-11" width="28" height="22" rx="2" fill="none" stroke="white" stroke-width="2"/>
+    <circle cx="0" cy="0" r="5" fill="none" stroke="white" stroke-width="2"/>
+    <rect x="-11" y="7" width="22" height="3" rx="1" fill="white" opacity="0.7"/>
+  </g>
+  
+  <!-- Microphone icons -->
+  <g transform="translate(100, 350)" opacity="0.6">
+    <rect x="-8" y="-20" width="16" height="12" rx="2" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="0" y1="-8" x2="0" y2="8" stroke="white" stroke-width="2"/>
+    <line x1="-6" y1="8" x2="6" y2="8" stroke="white" stroke-width="2"/>
+    <line x1="-4" y1="12" x2="4" y2="12" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <g transform="translate(750, 300)" opacity="0.5">
+    <rect x="-7" y="-18" width="14" height="11" rx="2" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="0" y1="-7" x2="0" y2="7" stroke="white" stroke-width="2"/>
+    <line x1="-5" y1="7" x2="5" y2="7" stroke="white" stroke-width="2"/>
+    <line x1="-3" y1="11" x2="3" y2="11" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Pen/Writing icons -->
+  <g transform="translate(500, 100)" opacity="0.6">
+    <path d="M -12 -15 L 8 5 L 2 11 L -18 -5 Z" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="-12" y1="-15" x2="-8" y2="-19" stroke="white" stroke-width="2"/>
+  </g>
+  
+  <g transform="translate(200, 280)" opacity="0.5">
+    <path d="M -10 -13 L 7 4 L 2 9 L -15 -4 Z" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="-10" y1="-13" x2="-7" y2="-16" stroke="white" stroke-width="2"/>
+  </g>
+  
+  <!-- Globe/World icons -->
+  <g transform="translate(350, 200)" opacity="0.6">
+    <circle cx="0" cy="0" r="18" fill="none" stroke="white" stroke-width="2"/>
+    <ellipse cx="0" cy="0" rx="18" ry="9" fill="none" stroke="white" stroke-width="1.5"/>
+    <line x1="-18" y1="0" x2="18" y2="0" stroke="white" stroke-width="1.5"/>
+    <path d="M -12 -6 Q 0 -8 12 -6" fill="none" stroke="white" stroke-width="1.5"/>
+    <path d="M -12 6 Q 0 8 12 6" fill="none" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <g transform="translate(600, 500)" opacity="0.5">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="white" stroke-width="2"/>
+    <ellipse cx="0" cy="0" rx="16" ry="8" fill="none" stroke="white" stroke-width="1.5"/>
+    <line x1="-16" y1="0" x2="16" y2="0" stroke="white" stroke-width="1.5"/>
+    <path d="M -11 -5 Q 0 -7 11 -5" fill="none" stroke="white" stroke-width="1.5"/>
+    <path d="M -11 5 Q 0 7 11 5" fill="none" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Clock/Time icons -->
+  <g transform="translate(450, 480)" opacity="0.6">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="0" y1="0" x2="0" y2="-10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="0" x2="8" y2="0" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="2" fill="white"/>
+  </g>
+  
+  <g transform="translate(120, 480)" opacity="0.5">
+    <circle cx="0" cy="0" r="14" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="0" y1="0" x2="0" y2="-9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="0" x2="7" y2="0" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="1.5" fill="white"/>
+  </g>
+  
+  <!-- Megaphone icons -->
+  <g transform="translate(550, 250)" opacity="0.6">
+    <path d="M -15 -8 L -8 -12 L -8 12 L -15 8 Z" fill="white" opacity="0.7"/>
+    <rect x="-8" y="-10" width="20" height="20" rx="3" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="12" y1="-8" x2="18" y2="-12" stroke="white" stroke-width="2"/>
+    <line x1="12" y1="8" x2="18" y2="12" stroke="white" stroke-width="2"/>
+  </g>
+  
+  <g transform="translate(300, 380)" opacity="0.5">
+    <path d="M -13 -7 L -7 -11 L -7 11 L -13 7 Z" fill="white" opacity="0.7"/>
+    <rect x="-7" y="-9" width="18" height="18" rx="3" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="11" y1="-7" x2="16" y2="-11" stroke="white" stroke-width="2"/>
+    <line x1="11" y1="7" x2="16" y2="11" stroke="white" stroke-width="2"/>
+  </g>
+  
+  <!-- Document icons -->
+  <g transform="translate(400, 350)" opacity="0.6">
+    <path d="M -12 -18 L 8 -18 L 12 -14 L 12 18 L -12 18 Z" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="-8" y1="-12" x2="8" y2="-12" stroke="white" stroke-width="1.5"/>
+    <line x1="-8" y1="-4" x2="8" y2="-4" stroke="white" stroke-width="1.5"/>
+    <line x1="-8" y1="4" x2="4" y2="4" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <g transform="translate(680, 280)" opacity="0.5">
+    <path d="M -11 -16 L 7 -16 L 11 -13 L 11 16 L -11 16 Z" fill="none" stroke="white" stroke-width="2"/>
+    <line x1="-7" y1="-11" x2="7" y2="-11" stroke="white" stroke-width="1.5"/>
+    <line x1="-7" y1="-4" x2="7" y2="-4" stroke="white" stroke-width="1.5"/>
+    <line x1="-7" y1="3" x2="4" y2="3" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Video/Recording icons -->
+  <g transform="translate(150, 220)" opacity="0.6">
+    <rect x="-12" y="-10" width="24" height="20" rx="2" fill="none" stroke="white" stroke-width="2"/>
+    <circle cx="0" cy="0" r="6" fill="white" opacity="0.8"/>
+  </g>
+  
+  <g transform="translate(500, 400)" opacity="0.5">
+    <rect x="-11" y="-9" width="22" height="18" rx="2" fill="none" stroke="white" stroke-width="2"/>
+    <circle cx="0" cy="0" r="5" fill="white" opacity="0.8"/>
+  </g>
+</svg>
